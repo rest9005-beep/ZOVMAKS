@@ -1,927 +1,1097 @@
-// FileSphere - Modern File Sharing Platform
-class FileSphere {
-    constructor() {
-        this.init();
-    }
-
-    init() {
-        // Инициализация всех компонентов
-        this.initParticles();
-        this.initEventListeners();
-        this.initStatistics();
-        this.initCarousel();
-        this.initFiles();
-        this.initChart();
-        this.showToast('FileSphere загружен! Добро пожаловать!', 'success');
-    }
-
-    // Инициализация частиц фона
-    initParticles() {
-        const container = document.getElementById('particles');
-        if (!container) return;
-
-        const particlesCount = 50;
-        for (let i = 0; i < particlesCount; i++) {
-            const particle = document.createElement('div');
-            particle.className = 'particle';
-            particle.style.cssText = `
-                position: absolute;
-                width: ${Math.random() * 4 + 1}px;
-                height: ${Math.random() * 4 + 1}px;
-                background: var(--primary);
-                border-radius: 50%;
-                opacity: ${Math.random() * 0.3 + 0.1};
-                left: ${Math.random() * 100}%;
-                top: ${Math.random() * 100}%;
-                animation: floatParticle ${Math.random() * 20 + 10}s infinite linear;
-                animation-delay: ${Math.random() * 5}s;
-            `;
-            container.appendChild(particle);
-        }
-
-        // Добавляем стили для анимации частиц
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes floatParticle {
-                0% {
-                    transform: translateY(0) translateX(0);
-                }
-                25% {
-                    transform: translateY(-100px) translateX(100px);
-                }
-                50% {
-                    transform: translateY(-200px) translateX(0);
-                }
-                75% {
-                    transform: translateY(-100px) translateX(-100px);
-                }
-                100% {
-                    transform: translateY(0) translateX(0);
-                }
+document.addEventListener('DOMContentLoaded', function() {
+    // Инициализация данных из localStorage
+    let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
+    let files = JSON.parse(localStorage.getItem('files')) || [];
+    let users = JSON.parse(localStorage.getItem('users')) || [
+        {
+            id: 1,
+            username: 'demo',
+            email: 'demo@fileshare.com',
+            password: 'demo123',
+            bio: 'Демонстрационный пользователь',
+            avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=demo',
+            banner: 'linear-gradient(135deg, #FF6B00, #00D4FF)',
+            uploads: 0,
+            downloads: 0,
+            likes: 0,
+            settings: {
+                publicProfile: true,
+                showEmail: false,
+                fileNotifications: true
             }
-        `;
-        document.head.appendChild(style);
-    }
-
-    // Инициализация обработчиков событий
-    initEventListeners() {
-        // Навигация
-        this.setupNavigation();
-        
-        // Поиск
-        this.setupSearch();
-        
-        // Модальные окна
-        this.setupModals();
-        
-        // Загрузка файлов
-        this.setupFileUpload();
-        
-        // Фильтрация
-        this.setupFiltering();
-        
-        // Категории
-        this.setupCategories();
-        
-        // Пользовательское меню
-        this.setupUserMenu();
-    }
-
-    setupNavigation() {
-        const navLinks = document.querySelectorAll('.nav-link');
-        navLinks.forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                navLinks.forEach(l => l.classList.remove('active'));
-                link.classList.add('active');
-            });
-        });
-
-        // Кнопки героя
-        document.getElementById('heroUploadBtn')?.addEventListener('click', () => {
-            this.openModal('uploadModal');
-        });
-
-        document.getElementById('exploreBtn')?.addEventListener('click', () => {
-            document.querySelector('[href="#explore"]')?.click();
-        });
-    }
-
-    setupSearch() {
-        const searchInput = document.getElementById('searchInput');
-        const searchBtn = document.getElementById('searchBtn');
-        const filterBtn = document.getElementById('filterBtn');
-
-        const performSearch = () => {
-            const query = searchInput.value.trim();
-            if (query) {
-                this.filterFiles(query);
-                this.showToast(`Найдено файлов по запросу: "${query}"`, 'info');
-            }
-        };
-
-        searchBtn?.addEventListener('click', performSearch);
-        searchInput?.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') performSearch();
-        });
-
-        filterBtn?.addEventListener('click', () => {
-            this.showToast('Фильтры поиска', 'info');
-        });
-    }
-
-    setupModals() {
-        // Закрытие модальных окон
-        document.querySelectorAll('.modal-close, .modal-overlay').forEach(element => {
-            element.addEventListener('click', () => {
-                this.closeAllModals();
-            });
-        });
-
-        // Открытие модальных окон
-        document.getElementById('uploadBtn')?.addEventListener('click', () => {
-            this.openModal('uploadModal');
-        });
-
-        document.getElementById('loginBtn')?.addEventListener('click', () => {
-            this.showToast('Функция входа в разработке', 'info');
-        });
-
-        document.getElementById('registerBtn')?.addEventListener('click', () => {
-            this.showToast('Функция регистрации в разработке', 'info');
-        });
-
-        // Предотвращение закрытия при клике внутри модалки
-        document.querySelectorAll('.modal').forEach(modal => {
-            modal.addEventListener('click', (e) => {
-                e.stopPropagation();
-            });
-        });
-    }
-
-    setupFileUpload() {
-        const uploadZone = document.getElementById('uploadZone');
-        const fileInput = document.getElementById('fileUpload');
-        const selectBtn = document.getElementById('selectFileBtn');
-
-        // Клик по зоне загрузки
-        uploadZone?.addEventListener('click', () => {
-            fileInput?.click();
-        });
-
-        // Кнопка выбора файла
-        selectBtn?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            fileInput?.click();
-        });
-
-        // Перетаскивание файлов
-        uploadZone?.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            uploadZone.classList.add('drag-over');
-        });
-
-        uploadZone?.addEventListener('dragleave', () => {
-            uploadZone.classList.remove('drag-over');
-        });
-
-        uploadZone?.addEventListener('drop', (e) => {
-            e.preventDefault();
-            uploadZone.classList.remove('drag-over');
-            this.handleFileUpload(e.dataTransfer.files);
-        });
-
-        // Выбор файла через input
-        fileInput?.addEventListener('change', (e) => {
-            this.handleFileUpload(e.target.files);
-        });
-    }
-
-    async handleFileUpload(files) {
-        if (!files.length) return;
-
-        const uploadZone = document.getElementById('uploadZone');
-        const uploadDetails = document.getElementById('uploadDetails');
-        
-        uploadZone.style.display = 'none';
-        uploadDetails.style.display = 'block';
-
-        const progressFill = document.querySelector('.progress-fill');
-        const progressPercent = document.querySelector('.progress-percent');
-        const progressSpeed = document.querySelector('.progress-speed');
-        const progressTime = document.querySelector('.progress-time');
-
-        let totalSize = 0;
-        for (let file of files) {
-            totalSize += file.size;
         }
-
-        let loaded = 0;
-        const startTime = Date.now();
-
-        // Имитация загрузки
-        const interval = setInterval(() => {
-            loaded += totalSize / 100;
-            const percent = Math.min((loaded / totalSize) * 100, 100);
+    ];
+    
+    // Сохранение данных в localStorage
+    function saveData() {
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        localStorage.setItem('files', JSON.stringify(files));
+        localStorage.setItem('users', JSON.stringify(users));
+    }
+    
+    // Инициализация интерфейса
+    function initUI() {
+        updateUserUI();
+        updateStats();
+        renderFiles();
+        
+        // Инициализация счетчиков с анимацией
+        animateStats();
+    }
+    
+    // Обновление UI пользователя
+    function updateUserUI() {
+        const loginBtn = document.getElementById('loginBtn');
+        const registerBtn = document.getElementById('registerBtn');
+        const userProfile = document.getElementById('userProfile');
+        const userName = document.getElementById('userName');
+        const profileUserName = document.getElementById('profileUserName');
+        const profileUserEmail = document.getElementById('profileUserEmail');
+        const profileAvatar = document.querySelector('#profileAvatar img');
+        
+        if (currentUser) {
+            loginBtn.style.display = 'none';
+            registerBtn.style.display = 'none';
+            userProfile.style.display = 'block';
             
-            progressFill.style.width = `${percent}%`;
-            progressPercent.textContent = `${Math.round(percent)}%`;
-
-            const elapsed = (Date.now() - startTime) / 1000;
-            const speed = loaded / elapsed;
-            progressSpeed.textContent = this.formatFileSize(speed) + '/s';
-
-            const remaining = (totalSize - loaded) / speed;
-            progressTime.textContent = `Осталось: ${this.formatTime(remaining)}`;
-
-            if (percent >= 100) {
-                clearInterval(interval);
-                setTimeout(() => {
-                    this.showToast(`${files.length} файлов успешно загружены!`, 'success');
-                    this.addSampleFiles(3);
-                    this.closeAllModals();
-                    
-                    // Сброс формы
-                    setTimeout(() => {
-                        uploadZone.style.display = 'block';
-                        uploadDetails.style.display = 'none';
-                        progressFill.style.width = '0%';
-                        progressPercent.textContent = '0%';
-                    }, 1000);
-                }, 500);
+            // Обновление данных в профиле
+            userName.textContent = currentUser.username;
+            profileUserName.textContent = currentUser.username;
+            profileUserEmail.textContent = currentUser.email;
+            
+            if (profileAvatar) {
+                profileAvatar.src = currentUser.avatar;
             }
-        }, 50);
-    }
-
-    setupFiltering() {
-        const viewButtons = document.querySelectorAll('.view-btn');
-        viewButtons.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const view = btn.dataset.view;
-                viewButtons.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                this.changeViewMode(view);
-            });
-        });
-    }
-
-    setupCategories() {
-        const categoryItems = document.querySelectorAll('.category-item');
-        categoryItems.forEach(item => {
-            item.addEventListener('click', (e) => {
-                e.preventDefault();
-                const category = item.dataset.category;
-                this.filterByCategory(category);
-                
-                categoryItems.forEach(i => i.classList.remove('active'));
-                item.classList.add('active');
-                
-                this.showToast(`Показаны файлы: ${item.querySelector('.category-name').textContent}`, 'info');
-            });
-        });
-
-        // Переключение категорий
-        document.getElementById('categoriesToggle')?.addEventListener('click', () => {
-            const sidebar = document.querySelector('.sidebar-categories');
-            sidebar.style.transform = sidebar.style.transform ? '' : 'translateX(-100%)';
-        });
-    }
-
-    setupUserMenu() {
-        const userBtn = document.getElementById('userMenuBtn');
-        const dropdown = document.getElementById('userDropdown');
-
-        userBtn?.addEventListener('click', () => {
-            dropdown.classList.toggle('show');
-        });
-
-        // Закрытие при клике вне меню
-        document.addEventListener('click', (e) => {
-            if (!userBtn?.contains(e.target) && !dropdown?.contains(e.target)) {
-                dropdown?.classList.remove('show');
+            
+            // Обновление аватара в выпадающем меню
+            const headerAvatar = document.querySelector('.profile-btn .avatar');
+            if (headerAvatar) {
+                headerAvatar.src = currentUser.avatar;
             }
-        });
-
-        // Обработка пунктов меню
-        dropdown?.querySelectorAll('.dropdown-item').forEach(item => {
-            item.addEventListener('click', (e) => {
-                e.preventDefault();
-                const text = item.querySelector('span').textContent;
-                this.showToast(`Открыто: ${text}`, 'info');
-                dropdown.classList.remove('show');
-            });
-        });
+            
+            // Обновление статистики профиля
+            document.getElementById('userUploadsCount').textContent = currentUser.uploads || 0;
+            document.getElementById('userDownloadsCount').textContent = currentUser.downloads || 0;
+            document.getElementById('userLikesCount').textContent = currentUser.likes || 0;
+            
+            // Обновление био
+            const currentBio = document.getElementById('currentBio');
+            if (currentBio && currentUser.bio) {
+                currentBio.textContent = currentUser.bio;
+            }
+        } else {
+            loginBtn.style.display = 'flex';
+            registerBtn.style.display = 'flex';
+            userProfile.style.display = 'none';
+        }
     }
-
-    // Инициализация анимированной статистики
-    initStatistics() {
-        const counters = document.querySelectorAll('.stat-number[data-count]');
+    
+    // Обновление статистики сайта
+    function updateStats() {
+        const totalUsers = users.length;
+        const totalFiles = files.length;
+        const totalDownloads = files.reduce((sum, file) => sum + (file.downloads || 0), 0);
+        const totalLikes = files.reduce((sum, file) => sum + (file.likes || 0), 0);
         
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    this.animateCounter(entry.target);
-                    observer.unobserve(entry.target);
-                }
-            });
-        }, { threshold: 0.5 });
-
-        counters.forEach(counter => observer.observe(counter));
+        document.getElementById('usersCount').textContent = totalUsers;
+        document.getElementById('filesCount').textContent = totalFiles;
+        document.getElementById('downloadsCount').textContent = totalDownloads;
+        document.getElementById('likesCount').textContent = totalLikes;
     }
-
-    animateCounter(element) {
-        const target = parseInt(element.dataset.count);
-        const duration = 2000;
-        const step = target / (duration / 16);
-        let current = 0;
-
+    
+    // Анимация счетчиков
+    function animateCounter(elementId, finalValue, duration = 1500) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+        
+        const startValue = parseInt(element.textContent.replace(/,/g, '')) || 0;
+        const increment = Math.max(1, Math.floor((finalValue - startValue) / (duration / 16)));
+        let currentValue = startValue;
+        
         const timer = setInterval(() => {
-            current += step;
-            if (current >= target) {
-                element.textContent = this.formatNumber(target);
+            currentValue += increment;
+            if (currentValue >= finalValue) {
+                element.textContent = finalValue.toLocaleString();
                 clearInterval(timer);
             } else {
-                element.textContent = this.formatNumber(Math.floor(current));
+                element.textContent = Math.floor(currentValue).toLocaleString();
             }
         }, 16);
     }
-
-    // Инициализация карусели трендов
-    initCarousel() {
-        const carousel = document.getElementById('trendingCarousel');
-        if (!carousel) return;
-
-        const trendingFiles = [
-            {
-                icon: 'fas fa-file-code',
-                title: 'AI Генератор градиентов',
-                desc: 'Искусственный интеллект для создания уникальных градиентов',
-                author: 'AI_Designer',
-                views: '2.4k',
-                downloads: '1.8k',
-                type: 'development'
-            },
-            {
-                icon: 'fas fa-file-video',
-                title: 'Моушн дизайн курс',
-                desc: 'Полный курс по анимации и моушн дизайну',
-                author: 'MotionPro',
-                views: '3.1k',
-                downloads: '2.5k',
-                type: 'multimedia'
-            },
-            {
-                icon: 'fas fa-file-pdf',
-                title: 'UI/UX руководство 2023',
-                desc: 'Актуальное руководство по дизайну интерфейсов',
-                author: 'DesignLab',
-                views: '4.2k',
-                downloads: '3.7k',
-                type: 'design'
-            },
-            {
-                icon: 'fas fa-file-archive',
-                title: 'Библиотека текстур 4K',
-                desc: 'Коллекция высококачественных текстур для дизайна',
-                author: 'TextureHub',
-                views: '1.9k',
-                downloads: '1.5k',
-                type: 'design'
-            }
-        ];
-
-        trendingFiles.forEach(file => {
-            const card = this.createTrendingCard(file);
-            carousel.appendChild(card);
-        });
-
-        // Навигация карусели
-        let scrollPosition = 0;
-        const cardWidth = 324; // 300px + gap
-
-        document.getElementById('prevTrending')?.addEventListener('click', () => {
-            scrollPosition = Math.max(scrollPosition - cardWidth, 0);
-            carousel.scrollTo({ left: scrollPosition, behavior: 'smooth' });
-        });
-
-        document.getElementById('nextTrending')?.addEventListener('click', () => {
-            scrollPosition = Math.min(scrollPosition + cardWidth, carousel.scrollWidth - carousel.clientWidth);
-            carousel.scrollTo({ left: scrollPosition, behavior: 'smooth' });
-        });
+    
+    function animateStats() {
+        setTimeout(() => {
+            const totalUsers = users.length;
+            const totalFiles = files.length;
+            const totalDownloads = files.reduce((sum, file) => sum + (file.downloads || 0), 0);
+            const totalLikes = files.reduce((sum, file) => sum + (file.likes || 0), 0);
+            
+            animateCounter('usersCount', totalUsers);
+            animateCounter('filesCount', totalFiles);
+            animateCounter('downloadsCount', totalDownloads);
+            animateCounter('likesCount', totalLikes);
+        }, 500);
     }
-
-    createTrendingCard(file) {
-        const card = document.createElement('div');
-        card.className = 'trending-card';
-        card.dataset.type = file.type;
+    
+    // Рендеринг файлов
+    function renderFiles() {
+        const filesContainer = document.getElementById('filesContainer');
+        const emptyState = document.getElementById('emptyState');
         
-        card.innerHTML = `
-            <div class="trending-badge">
-                <i class="fas fa-fire"></i>
-                <span>Тренд</span>
-            </div>
-            <div class="trending-icon">
-                <i class="${file.icon}"></i>
-            </div>
-            <div class="trending-content">
-                <h3>${file.title}</h3>
-                <p>${file.desc}</p>
-                <div class="trending-meta">
-                    <div class="trending-author">
-                        <div class="author-avatar">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <span>${file.author}</span>
-                    </div>
-                    <div class="trending-stats">
-                        <div class="stat-item">
-                            <i class="fas fa-eye"></i>
-                            <span>${file.views}</span>
-                        </div>
-                        <div class="stat-item">
-                            <i class="fas fa-download"></i>
-                            <span>${file.downloads}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="trending-actions">
-                    <button class="btn-trending preview">
-                        <i class="fas fa-eye"></i>
-                        <span>Просмотр</span>
-                    </button>
-                    <button class="btn-trending download">
-                        <i class="fas fa-download"></i>
-                        <span>Скачать</span>
-                    </button>
-                </div>
-            </div>
-        `;
-
-        // Обработчики кнопок
-        card.querySelector('.preview').addEventListener('click', () => {
-            this.showToast(`Просмотр: ${file.title}`, 'info');
-        });
-
-        card.querySelector('.download').addEventListener('click', () => {
-            this.showToast(`Скачивание: ${file.title}`, 'success');
-            this.incrementDownloadCount(card);
-        });
-
-        return card;
-    }
-
-    // Инициализация файлов
-    initFiles() {
-        const filesGrid = document.getElementById('filesGrid');
-        if (!filesGrid) return;
-
-        const sampleFiles = [
-            {
-                icon: 'fas fa-file-code',
-                title: 'React компоненты',
-                desc: 'Набор переиспользуемых React компонентов',
-                size: '4.2 MB',
-                date: '15.10.2023',
-                tags: ['React', 'JavaScript', 'UI'],
-                author: 'DevMaster',
-                type: 'development'
-            },
-            {
-                icon: 'fas fa-file-image',
-                title: '3D иллюстрации',
-                desc: 'Коллекция 3D иллюстраций для проектов',
-                size: '28.5 MB',
-                date: '14.10.2023',
-                tags: ['3D', 'Дизайн', 'Иллюстрации'],
-                author: 'Design3D',
-                type: 'design'
-            },
-            {
-                icon: 'fas fa-file-video',
-                title: 'After Effects шаблоны',
-                desc: 'Профессиональные шаблоны для After Effects',
-                size: '156 MB',
-                date: '13.10.2023',
-                tags: ['Видео', 'Анимация', 'Шаблоны'],
-                author: 'MotionFX',
-                type: 'multimedia'
-            },
-            {
-                icon: 'fas fa-file-pdf',
-                title: 'Руководство по Figma',
-                desc: 'Полное руководство по работе в Figma',
-                size: '12.3 MB',
-                date: '12.10.2023',
-                tags: ['Figma', 'Дизайн', 'Обучение'],
-                author: 'DesignPro',
-                type: 'education'
-            },
-            {
-                icon: 'fas fa-file-archive',
-                title: 'Иконки Material Design',
-                desc: 'Полный набор иконок в стиле Material Design',
-                size: '8.7 MB',
-                date: '11.10.2023',
-                tags: ['Иконки', 'Material', 'UI'],
-                author: 'IconDesigner',
-                type: 'design'
-            },
-            {
-                icon: 'fas fa-file-alt',
-                title: 'Техническая документация',
-                desc: 'Шаблоны технической документации',
-                size: '6.5 MB',
-                date: '10.10.2023',
-                tags: ['Документы', 'Технические', 'Шаблоны'],
-                author: 'TechWriter',
-                type: 'documents'
-            }
-        ];
-
-        sampleFiles.forEach(file => {
-            const card = this.createFileCard(file);
-            filesGrid.appendChild(card);
-        });
-
-        // Кнопка "Показать больше"
-        document.getElementById('loadMoreBtn')?.addEventListener('click', () => {
-            this.addSampleFiles(3);
+        if (files.length === 0) {
+            emptyState.style.display = 'block';
+            filesContainer.innerHTML = '';
+            filesContainer.appendChild(emptyState);
+            return;
+        }
+        
+        emptyState.style.display = 'none';
+        filesContainer.innerHTML = '';
+        
+        // Фильтрация по активной категории
+        const activeCategory = document.querySelector('.category-filter.active')?.dataset.category || 'all';
+        const filteredFiles = activeCategory === 'all' 
+            ? files 
+            : files.filter(file => file.category === activeCategory);
+        
+        if (filteredFiles.length === 0) {
+            const noFiles = document.createElement('div');
+            noFiles.className = 'empty-state';
+            noFiles.innerHTML = `
+                <i class="fas fa-search"></i>
+                <h3>Файлы не найдены</h3>
+                <p>Попробуйте выбрать другую категорию</p>
+            `;
+            filesContainer.appendChild(noFiles);
+            return;
+        }
+        
+        filteredFiles.forEach(file => {
+            const fileCard = createFileCard(file);
+            filesContainer.appendChild(fileCard);
         });
     }
-
-    createFileCard(file) {
+    
+    // Создание карточки файла
+    function createFileCard(file) {
         const card = document.createElement('div');
         card.className = 'file-card';
-        card.dataset.type = file.type;
+        card.dataset.category = file.category;
+        card.dataset.id = file.id;
+        
+        // Определяем иконку для категории
+        let iconClass = 'fas fa-file';
+        if (file.category === 'documents') iconClass = 'fas fa-file-pdf';
+        if (file.category === 'images') iconClass = 'fas fa-file-image';
+        if (file.category === 'music') iconClass = 'fas fa-file-audio';
+        if (file.category === 'video') iconClass = 'fas fa-file-video';
+        if (file.category === 'archives') iconClass = 'fas fa-file-archive';
+        if (file.category === 'software') iconClass = 'fas fa-file-code';
+        if (file.category === 'other') iconClass = 'fas fa-file';
+        
+        // Проверяем, лайкнул ли текущий пользователь этот файл
+        const isLiked = currentUser && file.likedBy && file.likedBy.includes(currentUser.id);
+        
+        // Создаем теги
+        const tagsHTML = file.tags ? file.tags.map(tag => 
+            `<span class="tag">${tag.trim()}</span>`
+        ).join('') : '';
         
         card.innerHTML = `
-            <div class="file-header">
-                <div class="file-type">
-                    <i class="${file.icon}"></i>
-                </div>
-                <div class="file-actions">
-                    <button class="file-action-btn favorite">
-                        <i class="far fa-heart"></i>
-                    </button>
-                    <button class="file-action-btn share">
-                        <i class="fas fa-share-alt"></i>
-                    </button>
-                </div>
+            <div class="file-icon">
+                <i class="${iconClass}"></i>
             </div>
-            <div class="file-content">
-                <h3>${file.title}</h3>
-                <p class="file-description">${file.desc}</p>
+            <div class="file-info">
+                <h3>${file.name}</h3>
+                <p class="file-description">${file.description || 'Без описания'}</p>
                 <div class="file-meta">
-                    <div class="file-size">
-                        <i class="fas fa-weight-hanging"></i>
-                        <span>${file.size}</span>
-                    </div>
-                    <div class="file-date">
-                        <i class="far fa-calendar"></i>
-                        <span>${file.date}</span>
-                    </div>
+                    <span class="file-size"><i class="fas fa-weight-hanging"></i> ${file.size}</span>
+                    <span class="file-author"><i class="fas fa-user"></i> ${file.author}</span>
+                    <span class="file-date"><i class="far fa-calendar"></i> ${file.date}</span>
                 </div>
                 <div class="file-tags">
-                    ${file.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                    ${tagsHTML}
                 </div>
-                <div class="file-footer">
-                    <div class="file-author">
-                        <div class="author-avatar">
-                            <i class="fas fa-user"></i>
-                        </div>
-                        <div class="author-info">
-                            <div class="author-name">${file.author}</div>
-                            <div class="author-role">Автор</div>
-                        </div>
-                    </div>
-                    <button class="download-btn">
-                        <i class="fas fa-download"></i>
-                        <span>Скачать</span>
+            </div>
+            <div class="file-actions">
+                <div class="file-actions-main">
+                    <button class="btn-download" data-file-id="${file.id}">
+                        <i class="fas fa-download"></i> Скачать
                     </button>
+                </div>
+                <div class="file-actions-secondary">
+                    <button class="btn-like ${isLiked ? 'liked' : ''}" data-file-id="${file.id}">
+                        <i class="fas fa-heart"></i>
+                        <span class="like-count">${file.likes || 0}</span>
+                    </button>
+                    <span class="download-count">
+                        <i class="fas fa-download"></i> ${file.downloads || 0}
+                    </span>
                 </div>
             </div>
         `;
-
-        // Обработчики действий
-        const favoriteBtn = card.querySelector('.favorite');
-        const shareBtn = card.querySelector('.share');
-        const downloadBtn = card.querySelector('.download-btn');
-
-        favoriteBtn.addEventListener('click', () => {
-            const icon = favoriteBtn.querySelector('i');
-            if (icon.classList.contains('far')) {
-                icon.className = 'fas fa-heart';
-                favoriteBtn.style.color = 'var(--primary)';
-                this.showToast('Добавлено в избранное', 'success');
-            } else {
-                icon.className = 'far fa-heart';
-                favoriteBtn.style.color = '';
-                this.showToast('Убрано из избранного', 'info');
-            }
-        });
-
-        shareBtn.addEventListener('click', () => {
-            this.showToast('Ссылка скопирована в буфер обмена', 'success');
-        });
-
-        downloadBtn.addEventListener('click', () => {
-            this.showToast(`Скачивание: ${file.title}`, 'success');
-            this.incrementDownloadCount(card);
-        });
-
+        
         return card;
     }
-
-    addSampleFiles(count = 3) {
-        const filesGrid = document.getElementById('filesGrid');
-        if (!filesGrid) return;
-
-        const newFiles = [
-            {
-                icon: 'fas fa-file-music',
-                title: 'Звуковые эффекты',
-                desc: 'Коллекция звуковых эффектов для видео',
-                size: '45.2 MB',
-                date: 'Сегодня',
-                tags: ['Звук', 'Эффекты', 'Аудио'],
-                author: 'SoundDesigner',
-                type: 'multimedia'
-            },
-            {
-                icon: 'fas fa-file-powerpoint',
-                title: 'Презентация бизнес-плана',
-                desc: 'Готовый шаблон для бизнес-презентаций',
-                size: '18.7 MB',
-                date: 'Сегодня',
-                tags: ['Бизнес', 'Презентация', 'Шаблон'],
-                author: 'BusinessPro',
-                type: 'documents'
-            },
-            {
-                icon: 'fas fa-file-csv',
-                title: 'Датасет для анализа',
-                desc: 'Набор данных для машинного обучения',
-                size: '32.4 MB',
-                date: 'Сегодня',
-                tags: ['Данные', 'Анализ', 'ML'],
-                author: 'DataScientist',
-                type: 'development'
-            }
-        ];
-
-        for (let i = 0; i < Math.min(count, newFiles.length); i++) {
-            const card = this.createFileCard(newFiles[i]);
-            filesGrid.appendChild(card);
-            
-            // Анимация появления
-            card.style.opacity = '0';
-            card.style.transform = 'translateY(20px)';
-            
-            setTimeout(() => {
-                card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-                card.style.opacity = '1';
-                card.style.transform = 'translateY(0)';
-            }, i * 100);
+    
+    // Модальные окна
+    const modals = {
+        login: document.getElementById('loginModal'),
+        register: document.getElementById('registerModal'),
+        upload: document.getElementById('uploadModal'),
+        profile: document.getElementById('profileModal'),
+        settings: document.getElementById('settingsModal')
+    };
+    
+    const openModalButtons = {
+        login: document.getElementById('loginBtn'),
+        register: document.getElementById('registerBtn'),
+        upload: document.getElementById('uploadBtn'),
+        profile: document.getElementById('viewProfileBtn'),
+        settings: document.getElementById('settingsBtn')
+    };
+    
+    const closeModalButtons = document.querySelectorAll('.close-modal');
+    
+    // Открытие модальных окон
+    Object.entries(openModalButtons).forEach(([modalName, button]) => {
+        if (button) {
+            button.addEventListener('click', (e) => {
+                if (e.target.closest('#emptyUploadBtn')) return;
+                if (modalName === 'upload' && !currentUser) {
+                    showNotification('Для загрузки файлов необходимо войти в аккаунт', 'error');
+                    openModal('login');
+                    return;
+                }
+                if (modalName === 'profile' && !currentUser) {
+                    showNotification('Для просмотра профиля необходимо войти в аккаунт', 'error');
+                    openModal('login');
+                    return;
+                }
+                openModal(modalName);
+            });
         }
-
-        this.showToast(`Добавлено ${Math.min(count, newFiles.length)} новых файлов`, 'info');
+    });
+    
+    // Открытие профиля через кнопку в выпадающем меню
+    document.getElementById('profileBtn')?.addEventListener('click', () => {
+        if (currentUser) {
+            openModal('profile');
+        }
+    });
+    
+    // Открытие загрузки файла через пустое состояние
+    document.getElementById('emptyUploadBtn')?.addEventListener('click', () => {
+        if (!currentUser) {
+            showNotification('Для загрузки файлов необходимо войти в аккаунт', 'error');
+            openModal('login');
+            return;
+        }
+        openModal('upload');
+    });
+    
+    // Закрытие модальных окон
+    closeModalButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const modal = this.closest('.modal');
+            closeModal(modal);
+        });
+    });
+    
+    // Закрытие модального окна при клике вне его
+    window.addEventListener('click', function(event) {
+        if (event.target.classList.contains('modal')) {
+            closeModal(event.target);
+        }
+    });
+    
+    function openModal(modalName) {
+        const modal = modals[modalName];
+        if (modal) {
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            
+            // Если открываем профиль или настройки, обновляем данные
+            if (modalName === 'profile' || modalName === 'settings') {
+                updateProfileData();
+            }
+        }
     }
-
-    // Инициализация графика
-    initChart() {
-        const ctx = document.getElementById('activityChart');
-        if (!ctx) return;
-
-        new Chart(ctx.getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
-                datasets: [{
-                    label: 'Загрузки',
-                    data: [1200, 1900, 3000, 5000, 2000, 3000, 4500],
-                    borderColor: 'var(--primary)',
-                    backgroundColor: 'rgba(255, 107, 53, 0.1)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.4
-                }, {
-                    label: 'Загрузки файлов',
-                    data: [800, 1200, 1500, 2000, 1800, 2500, 3000],
-                    borderColor: 'var(--accent)',
-                    backgroundColor: 'rgba(255, 167, 38, 0.1)',
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        labels: {
-                            color: 'var(--text-primary)',
-                            font: {
-                                family: 'Inter'
-                            }
-                        }
+    
+    function closeModal(modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = 'auto';
+        
+        // Сбрасываем формы
+        const forms = modal.querySelectorAll('form');
+        forms.forEach(form => form.reset());
+        
+        // Сбрасываем информацию о файле
+        const fileInfo = modal.querySelector('.file-info');
+        if (fileInfo) {
+            fileInfo.textContent = 'Файл не выбран';
+            fileInfo.style.color = 'var(--text-muted)';
+        }
+    }
+    
+    // Обработка формы входа
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            
+            // Поиск пользователя
+            const user = users.find(u => 
+                (u.username === username || u.email === username) && 
+                u.password === password
+            );
+            
+            if (user) {
+                currentUser = {
+                    id: user.id,
+                    username: user.username,
+                    email: user.email,
+                    bio: user.bio,
+                    avatar: user.avatar,
+                    banner: user.banner,
+                    uploads: user.uploads || 0,
+                    downloads: user.downloads || 0,
+                    likes: user.likes || 0,
+                    settings: user.settings || {
+                        publicProfile: true,
+                        showEmail: false,
+                        fileNotifications: true
                     }
-                },
-                scales: {
-                    x: {
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.05)'
-                        },
-                        ticks: {
-                            color: 'var(--text-secondary)'
-                        }
-                    },
-                    y: {
-                        grid: {
-                            color: 'rgba(255, 255, 255, 0.05)'
-                        },
-                        ticks: {
-                            color: 'var(--text-secondary)'
-                        }
-                    }
+                };
+                
+                saveData();
+                updateUserUI();
+                showNotification(`Добро пожаловать, ${user.username}!`, 'success');
+                closeModal(modals.login);
+                loginForm.reset();
+            } else {
+                showNotification('Неверные имя пользователя или пароль', 'error');
+            }
+        });
+    }
+    
+    // Обработка формы регистрации
+    const registerForm = document.getElementById('registerForm');
+    if (registerForm) {
+        registerForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const username = document.getElementById('regUsername').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const confirmPassword = document.getElementById('regConfirmPassword').value;
+            
+            // Валидация
+            if (!username || !email || !password || !confirmPassword) {
+                showNotification('Заполните все поля!', 'error');
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                showNotification('Пароли не совпадают!', 'error');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showNotification('Пароль должен быть не менее 6 символов!', 'error');
+                return;
+            }
+            
+            // Проверка существования пользователя
+            const userExists = users.some(u => u.username === username || u.email === email);
+            if (userExists) {
+                showNotification('Пользователь с таким именем или email уже существует', 'error');
+                return;
+            }
+            
+            // Создание нового пользователя
+            const newUser = {
+                id: users.length + 1,
+                username,
+                email,
+                password,
+                bio: 'Новый пользователь FileShare',
+                avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${username}`,
+                banner: 'linear-gradient(135deg, #FF6B00, #00D4FF)',
+                uploads: 0,
+                downloads: 0,
+                likes: 0,
+                settings: {
+                    publicProfile: true,
+                    showEmail: false,
+                    fileNotifications: true
+                }
+            };
+            
+            users.push(newUser);
+            currentUser = {
+                id: newUser.id,
+                username: newUser.username,
+                email: newUser.email,
+                bio: newUser.bio,
+                avatar: newUser.avatar,
+                banner: newUser.banner,
+                uploads: 0,
+                downloads: 0,
+                likes: 0,
+                settings: newUser.settings
+            };
+            
+            saveData();
+            updateUserUI();
+            updateStats();
+            showNotification(`Регистрация успешна! Добро пожаловать, ${username}!`, 'success');
+            closeModal(modals.register);
+            registerForm.reset();
+        });
+    }
+    
+    // Обработка формы загрузки файла
+    const uploadForm = document.getElementById('uploadForm');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    
+    if (fileInput) {
+        fileInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                const fileSize = file.size < 1024 * 1024 
+                    ? `${(file.size / 1024).toFixed(1)} KB` 
+                    : `${(file.size / (1024 * 1024)).toFixed(2)} MB`;
+                fileInfo.textContent = `${file.name} (${fileSize})`;
+                fileInfo.style.color = 'var(--primary-color)';
+                
+                // Автоматическое заполнение названия
+                const fileNameInput = document.getElementById('fileName');
+                if (fileNameInput && !fileNameInput.value) {
+                    fileNameInput.value = file.name.replace(/\.[^/.]+$/, ""); // Убираем расширение
                 }
             }
         });
     }
-
-    // Утилиты
-    filterFiles(query) {
-        const files = document.querySelectorAll('.file-card, .trending-card');
-        const searchTerm = query.toLowerCase();
-
-        files.forEach(file => {
-            const title = file.querySelector('h3')?.textContent.toLowerCase() || '';
-            const desc = file.querySelector('.file-description')?.textContent.toLowerCase() || '';
-            const tags = Array.from(file.querySelectorAll('.tag')).map(tag => tag.textContent.toLowerCase());
-            const author = file.querySelector('.author-name')?.textContent.toLowerCase() || '';
-
-            const matches = title.includes(searchTerm) || 
-                           desc.includes(searchTerm) || 
-                           tags.some(tag => tag.includes(searchTerm)) ||
-                           author.includes(searchTerm);
-
-            file.style.display = matches ? '' : 'none';
+    
+    if (uploadForm) {
+        uploadForm.addEventListener('submit', function(e) {
+            e.preventDefault();
             
-            if (matches) {
-                file.style.animation = 'none';
-                setTimeout(() => {
-                    file.style.animation = 'pulse 0.5s ease';
-                }, 10);
+            if (!currentUser) {
+                showNotification('Для загрузки файлов необходимо войти в аккаунт', 'error');
+                openModal('login');
+                return;
             }
+            
+            const fileName = document.getElementById('fileName').value.trim();
+            const fileDescription = document.getElementById('fileDescription').value.trim();
+            const fileCategory = document.getElementById('fileCategory').value;
+            const fileTags = document.getElementById('fileTags').value;
+            const file = fileInput.files[0];
+            
+            if (!fileName || !fileCategory || !file) {
+                showNotification('Заполните обязательные поля: название, категория и файл!', 'error');
+                return;
+            }
+            
+            // Создание нового файла
+            const fileSize = file.size < 1024 * 1024 
+                ? `${(file.size / 1024).toFixed(1)} KB` 
+                : `${(file.size / (1024 * 1024)).toFixed(2)} MB`;
+            
+            const newFile = {
+                id: files.length + 1,
+                name: fileName,
+                description: fileDescription,
+                category: fileCategory,
+                tags: fileTags.split(',').map(tag => tag.trim()).filter(tag => tag),
+                size: fileSize,
+                author: currentUser.username,
+                authorId: currentUser.id,
+                date: new Date().toLocaleDateString('ru-RU'),
+                downloads: 0,
+                likes: 0,
+                likedBy: []
+            };
+            
+            files.push(newFile);
+            
+            // Обновление статистики пользователя
+            const userIndex = users.findIndex(u => u.id === currentUser.id);
+            if (userIndex !== -1) {
+                users[userIndex].uploads = (users[userIndex].uploads || 0) + 1;
+                currentUser.uploads = users[userIndex].uploads;
+            }
+            
+            saveData();
+            updateUserUI();
+            updateStats();
+            renderFiles();
+            
+            showNotification(`Файл "${fileName}" успешно загружен!`, 'success');
+            closeModal(modals.upload);
+            uploadForm.reset();
+            fileInfo.textContent = 'Файл не выбран';
+            fileInfo.style.color = 'var(--text-muted)';
         });
     }
-
-    filterByCategory(category) {
-        const files = document.querySelectorAll('.file-card, .trending-card');
-        
-        files.forEach(file => {
-            const fileType = file.dataset.type;
-            const shouldShow = category === 'all' || fileType === category;
+    
+    // Обработка скачивания файлов
+    document.addEventListener('click', function(e) {
+        const downloadBtn = e.target.closest('.btn-download');
+        if (downloadBtn) {
+            e.preventDefault();
+            const fileId = parseInt(downloadBtn.dataset.fileId);
+            const file = files.find(f => f.id === fileId);
             
-            file.style.display = shouldShow ? '' : 'none';
+            if (!file) return;
             
-            if (shouldShow) {
-                file.style.opacity = '0';
-                file.style.transform = 'translateY(20px)';
+            if (!currentUser) {
+                showNotification('Для скачивания файлов необходимо войти в аккаунт', 'error');
+                openModal('login');
+                return;
+            }
+            
+            // Имитация скачивания
+            downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Скачивание...';
+            downloadBtn.classList.add('downloading');
+            downloadBtn.disabled = true;
+            
+            // Обновление счетчика скачиваний
+            file.downloads = (file.downloads || 0) + 1;
+            
+            // Обновление статистики пользователя
+            const userIndex = users.findIndex(u => u.id === currentUser.id);
+            if (userIndex !== -1) {
+                users[userIndex].downloads = (users[userIndex].downloads || 0) + 1;
+                currentUser.downloads = users[userIndex].downloads;
+            }
+            
+            saveData();
+            updateUserUI();
+            updateStats();
+            
+            // Обновление UI карточки файла
+            const card = downloadBtn.closest('.file-card');
+            const downloadCount = card.querySelector('.download-count');
+            if (downloadCount) {
+                downloadCount.innerHTML = `<i class="fas fa-download"></i> ${file.downloads}`;
+            }
+            
+            setTimeout(() => {
+                showNotification(`Файл "${file.name}" успешно скачан!`, 'success');
+                downloadBtn.innerHTML = '<i class="fas fa-check"></i> Скачан!';
                 
                 setTimeout(() => {
-                    file.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-                    file.style.opacity = '1';
-                    file.style.transform = 'translateY(0)';
-                }, 10);
-            }
-        });
-    }
-
-    changeViewMode(mode) {
-        const filesGrid = document.getElementById('filesGrid');
-        if (!filesGrid) return;
-
-        filesGrid.className = mode === 'list' ? 'files-list' : 'files-grid';
-        
-        const cards = filesGrid.querySelectorAll('.file-card');
-        cards.forEach(card => {
-            card.classList.toggle('list-view', mode === 'list');
-        });
-    }
-
-    incrementDownloadCount(card) {
-        const stats = card.querySelector('.trending-stats') || card.querySelector('.file-footer');
-        if (!stats) return;
-
-        let downloadsElement = stats.querySelector('.stat-item:nth-child(2) span') || 
-                              stats.querySelector('.download-btn span:nth-child(2)');
-        
-        if (downloadsElement) {
-            const current = parseInt(downloadsElement.textContent) || 0;
-            downloadsElement.textContent = current + 1;
+                    downloadBtn.innerHTML = '<i class="fas fa-download"></i> Скачать';
+                    downloadBtn.classList.remove('downloading');
+                    downloadBtn.disabled = false;
+                }, 2000);
+                
+                // Создаем временную ссылку для скачивания
+                const blob = new Blob([`Файл: ${file.name}\nОписание: ${file.description}\nКатегория: ${file.category}\nЗагружен: ${file.date}\nАвтор: ${file.author}`], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${file.name}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 1500);
         }
-    }
-
-    openModal(modalId) {
-        const modal = document.getElementById(modalId);
-        const overlay = document.getElementById('modalOverlay');
-        
-        if (modal && overlay) {
-            modal.classList.add('active');
-            overlay.classList.add('active');
-            document.body.style.overflow = 'hidden';
-        }
-    }
-
-    closeAllModals() {
-        document.querySelectorAll('.modal').forEach(modal => {
-            modal.classList.remove('active');
-        });
-        
-        const overlay = document.getElementById('modalOverlay');
-        if (overlay) overlay.classList.remove('active');
-        
-        document.body.style.overflow = '';
-    }
-
-    showToast(message, type = 'info') {
-        const container = document.getElementById('toastContainer');
-        if (!container) return;
-
-        const toast = document.createElement('div');
-        toast.className = `toast ${type}`;
-        
-        const icons = {
-            success: 'fas fa-check-circle',
-            error: 'fas fa-exclamation-circle',
-            info: 'fas fa-info-circle'
-        };
-
-        toast.innerHTML = `
-            <div class="toast-icon">
-                <i class="${icons[type]}"></i>
-            </div>
-            <div class="toast-content">
-                <div class="toast-title">Уведомление</div>
-                <div class="toast-message">${message}</div>
-            </div>
-            <button class="toast-close">
-                <i class="fas fa-times"></i>
-            </button>
-        `;
-
-        container.appendChild(toast);
-
-        // Автоматическое удаление
-        setTimeout(() => {
-            toast.style.animation = 'slideInRight 0.3s ease reverse';
-            setTimeout(() => toast.remove(), 300);
-        }, 5000);
-
-        // Кнопка закрытия
-        toast.querySelector('.toast-close').addEventListener('click', () => {
-            toast.style.animation = 'slideInRight 0.3s ease reverse';
-            setTimeout(() => toast.remove(), 300);
-        });
-    }
-
-    formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-
-    formatTime(seconds) {
-        if (seconds < 60) return `${Math.round(seconds)}с`;
-        const minutes = Math.floor(seconds / 60);
-        const secs = Math.round(seconds % 60);
-        return `${minutes}:${secs.toString().padStart(2, '0')}`;
-    }
-
-    formatNumber(num) {
-        if (num >= 1000000) {
-            return (num / 1000000).toFixed(1) + 'M';
-        }
-        if (num >= 1000) {
-            return (num / 1000).toFixed(1) + 'k';
-        }
-        return num.toString();
-    }
-}
-
-// Инициализация приложения при загрузке страницы
-document.addEventListener('DOMContentLoaded', () => {
-    new FileSphere();
+    });
     
-    // Добавляем класс загруженной странице для плавного появления
-    setTimeout(() => {
-        document.body.style.opacity = '1';
-    }, 100);
+    // Обработка лайков
+    document.addEventListener('click', function(e) {
+        const likeBtn = e.target.closest('.btn-like');
+        if (likeBtn) {
+            const fileId = parseInt(likeBtn.dataset.fileId);
+            const file = files.find(f => f.id === fileId);
+            
+            if (!file || !currentUser) {
+                if (!currentUser) {
+                    showNotification('Для оценки файлов необходимо войти в аккаунт', 'error');
+                    openModal('login');
+                }
+                return;
+            }
+            
+            // Инициализация likedBy, если его нет
+            if (!file.likedBy) {
+                file.likedBy = [];
+            }
+            
+            const userIndex = file.likedBy.indexOf(currentUser.id);
+            const isLiked = userIndex !== -1;
+            
+            if (isLiked) {
+                // Убираем лайк
+                file.likedBy.splice(userIndex, 1);
+                file.likes = Math.max(0, (file.likes || 0) - 1);
+                likeBtn.classList.remove('liked');
+                
+                // Обновление статистики пользователя
+                const userObjIndex = users.findIndex(u => u.id === currentUser.id);
+                if (userObjIndex !== -1) {
+                    users[userObjIndex].likes = Math.max(0, (users[userObjIndex].likes || 0) - 1);
+                    currentUser.likes = users[userObjIndex].likes;
+                }
+            } else {
+                // Добавляем лайк
+                file.likedBy.push(currentUser.id);
+                file.likes = (file.likes || 0) + 1;
+                likeBtn.classList.add('liked');
+                
+                // Обновление статистики пользователя
+                const userObjIndex = users.findIndex(u => u.id === currentUser.id);
+                if (userObjIndex !== -1) {
+                    users[userObjIndex].likes = (users[userObjIndex].likes || 0) + 1;
+                    currentUser.likes = users[userObjIndex].likes;
+                }
+            }
+            
+            saveData();
+            updateUserUI();
+            updateStats();
+            
+            // Обновление счетчика лайков в UI
+            const likeCount = likeBtn.querySelector('.like-count');
+            if (likeCount) {
+                likeCount.textContent = file.likes;
+            }
+            
+            // Анимация лайка
+            likeBtn.style.transform = 'scale(1.2)';
+            setTimeout(() => {
+                likeBtn.style.transform = 'scale(1)';
+            }, 300);
+        }
+    });
+    
+    // Фильтрация по категориям
+    const categoryFilters = document.querySelectorAll('.category-filter');
+    categoryFilters.forEach(filter => {
+        filter.addEventListener('click', function() {
+            categoryFilters.forEach(f => f.classList.remove('active'));
+            this.classList.add('active');
+            renderFiles();
+        });
+    });
+    
+    // Поиск файлов
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    
+    function performSearch() {
+        const searchTerm = searchInput.value.toLowerCase().trim();
+        
+        if (searchTerm === '') {
+            renderFiles();
+            return;
+        }
+        
+        const filesContainer = document.getElementById('filesContainer');
+        const filteredFiles = files.filter(file => 
+            file.name.toLowerCase().includes(searchTerm) ||
+            (file.description && file.description.toLowerCase().includes(searchTerm)) ||
+            (file.tags && file.tags.some(tag => tag.toLowerCase().includes(searchTerm))) ||
+            file.author.toLowerCase().includes(searchTerm)
+        );
+        
+        filesContainer.innerHTML = '';
+        
+        if (filteredFiles.length === 0) {
+            const noResults = document.createElement('div');
+            noResults.className = 'empty-state';
+            noResults.innerHTML = `
+                <i class="fas fa-search"></i>
+                <h3>Ничего не найдено</h3>
+                <p>Попробуйте изменить поисковый запрос</p>
+            `;
+            filesContainer.appendChild(noResults);
+            return;
+        }
+        
+        filteredFiles.forEach(file => {
+            const fileCard = createFileCard(file);
+            filesContainer.appendChild(fileCard);
+        });
+    }
+    
+    searchBtn.addEventListener('click', performSearch);
+    searchInput.addEventListener('keyup', function(e) {
+        if (e.key === 'Enter') {
+            performSearch();
+        }
+    });
+    
+    // Обновление данных профиля
+    function updateProfileData() {
+        if (!currentUser) return;
+        
+        document.getElementById('profileUserName').textContent = currentUser.username;
+        document.getElementById('profileUserEmail').textContent = currentUser.email;
+        
+        const currentBio = document.getElementById('currentBio');
+        if (currentBio) {
+            currentBio.textContent = currentUser.bio || 'Расскажите о себе...';
+        }
+        
+        const bioTextarea = document.getElementById('bioTextarea');
+        if (bioTextarea) {
+            bioTextarea.value = currentUser.bio || '';
+        }
+        
+        const profileAvatar = document.querySelector('#profileAvatar img');
+        if (profileAvatar) {
+            profileAvatar.src = currentUser.avatar;
+        }
+        
+        const profileBanner = document.getElementById('profileBanner');
+        if (profileBanner) {
+            profileBanner.style.background = currentUser.banner;
+        }
+        
+        // Обновление статистики профиля
+        document.getElementById('userUploadsCount').textContent = currentUser.uploads || 0;
+        document.getElementById('userDownloadsCount').textContent = currentUser.downloads || 0;
+        document.getElementById('userLikesCount').textContent = currentUser.likes || 0;
+        
+        // Обновление настроек
+        const settingsUsername = document.getElementById('settingsUsername');
+        const settingsEmail = document.getElementById('settingsEmail');
+        
+        if (settingsUsername) settingsUsername.value = currentUser.username;
+        if (settingsEmail) settingsEmail.value = currentUser.email;
+        
+        // Обновление переключателей приватности
+        if (currentUser.settings) {
+            const publicProfile = document.getElementById('publicProfile');
+            const showEmail = document.getElementById('showEmail');
+            const fileNotifications = document.getElementById('fileNotifications');
+            
+            if (publicProfile) publicProfile.checked = currentUser.settings.publicProfile;
+            if (showEmail) showEmail.checked = currentUser.settings.showEmail;
+            if (fileNotifications) fileNotifications.checked = currentUser.settings.fileNotifications;
+        }
+    }
+    
+    // Редактирование био
+    const editBioBtn = document.getElementById('editBioBtn');
+    const editBioForm = document.getElementById('editBioForm');
+    const saveBioBtn = document.getElementById('saveBioBtn');
+    const cancelBioBtn = document.getElementById('cancelBioBtn');
+    
+    if (editBioBtn) {
+        editBioBtn.addEventListener('click', () => {
+            editBioForm.style.display = 'block';
+            editBioBtn.style.display = 'none';
+        });
+    }
+    
+    if (saveBioBtn) {
+        saveBioBtn.addEventListener('click', () => {
+            const bioText = document.getElementById('bioTextarea').value.trim();
+            currentUser.bio = bioText || 'Расскажите о себе...';
+            
+            // Обновление в массиве пользователей
+            const userIndex = users.findIndex(u => u.id === currentUser.id);
+            if (userIndex !== -1) {
+                users[userIndex].bio = currentUser.bio;
+            }
+            
+            saveData();
+            updateProfileData();
+            
+            editBioForm.style.display = 'none';
+            editBioBtn.style.display = 'inline-flex';
+            showNotification('Информация о себе обновлена', 'success');
+        });
+    }
+    
+    if (cancelBioBtn) {
+        cancelBioBtn.addEventListener('click', () => {
+            editBioForm.style.display = 'none';
+            editBioBtn.style.display = 'inline-flex';
+            document.getElementById('bioTextarea').value = currentUser.bio || '';
+        });
+    }
+    
+    // Смена аватара
+    const changeAvatarBtn = document.getElementById('changeAvatarBtn');
+    if (changeAvatarBtn) {
+        changeAvatarBtn.addEventListener('click', () => {
+            const newAvatarSeed = Math.random().toString(36).substring(7);
+            const newAvatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${newAvatarSeed}`;
+            
+            currentUser.avatar = newAvatarUrl;
+            
+            // Обновление в массиве пользователей
+            const userIndex = users.findIndex(u => u.id === currentUser.id);
+            if (userIndex !== -1) {
+                users[userIndex].avatar = newAvatarUrl;
+            }
+            
+            saveData();
+            updateProfileData();
+            updateUserUI();
+            
+            showNotification('Аватар обновлен', 'success');
+        });
+    }
+    
+    // Смена баннера
+    const changeBannerBtn = document.getElementById('changeBannerBtn');
+    if (changeBannerBtn) {
+        changeBannerBtn.addEventListener('click', () => {
+            const gradients = [
+                'linear-gradient(135deg, #FF6B00, #00D4FF)',
+                'linear-gradient(135deg, #667eea, #764ba2)',
+                'linear-gradient(135deg, #f093fb, #f5576c)',
+                'linear-gradient(135deg, #4facfe, #00f2fe)',
+                'linear-gradient(135deg, #43e97b, #38f9d7)',
+                'linear-gradient(135deg, #fa709a, #fee140)'
+            ];
+            
+            const randomGradient = gradients[Math.floor(Math.random() * gradients.length)];
+            currentUser.banner = randomGradient;
+            
+            // Обновление в массиве пользователей
+            const userIndex = users.findIndex(u => u.id === currentUser.id);
+            if (userIndex !== -1) {
+                users[userIndex].banner = randomGradient;
+            }
+            
+            saveData();
+            updateProfileData();
+            
+            showNotification('Баннер обновлен', 'success');
+        });
+    }
+    
+    // Обработка формы настроек аккаунта
+    const accountForm = document.getElementById('accountForm');
+    if (accountForm) {
+        accountForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const newUsername = document.getElementById('settingsUsername').value.trim();
+            const newEmail = document.getElementById('settingsEmail').value.trim();
+            
+            if (!newUsername || !newEmail) {
+                showNotification('Заполните все поля', 'error');
+                return;
+            }
+            
+            // Проверка уникальности имени пользователя и email
+            const usernameExists = users.some(u => 
+                u.id !== currentUser.id && u.username === newUsername
+            );
+            const emailExists = users.some(u => 
+                u.id !== currentUser.id && u.email === newEmail
+            );
+            
+            if (usernameExists) {
+                showNotification('Это имя пользователя уже занято', 'error');
+                return;
+            }
+            
+            if (emailExists) {
+                showNotification('Этот email уже используется', 'error');
+                return;
+            }
+            
+            // Обновление данных
+            currentUser.username = newUsername;
+            currentUser.email = newEmail;
+            
+            // Обновление в массиве пользователей
+            const userIndex = users.findIndex(u => u.id === currentUser.id);
+            if (userIndex !== -1) {
+                users[userIndex].username = newUsername;
+                users[userIndex].email = newEmail;
+            }
+            
+            saveData();
+            updateUserUI();
+            updateProfileData();
+            
+            showNotification('Данные аккаунта обновлены', 'success');
+        });
+    }
+    
+    // Обработка формы смены пароля
+    const passwordForm = document.getElementById('passwordForm');
+    if (passwordForm) {
+        passwordForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmNewPassword = document.getElementById('confirmNewPassword').value;
+            
+            // Валидация
+            if (!currentPassword || !newPassword || !confirmNewPassword) {
+                showNotification('Заполните все поля', 'error');
+                return;
+            }
+            
+            // Проверка текущего пароля
+            const userIndex = users.findIndex(u => u.id === currentUser.id);
+            if (userIndex === -1 || users[userIndex].password !== currentPassword) {
+                showNotification('Текущий пароль неверен', 'error');
+                return;
+            }
+            
+            if (newPassword !== confirmNewPassword) {
+                showNotification('Новые пароли не совпадают', 'error');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                showNotification('Новый пароль должен быть не менее 6 символов', 'error');
+                return;
+            }
+            
+            if (newPassword === currentPassword) {
+                showNotification('Новый пароль должен отличаться от текущего', 'error');
+                return;
+            }
+            
+            // Обновление пароля
+            users[userIndex].password = newPassword;
+            saveData();
+            
+            showNotification('Пароль успешно изменен', 'success');
+            passwordForm.reset();
+        });
+    }
+    
+    // Обработка переключателей приватности
+    const privacySwitches = ['publicProfile', 'showEmail', 'fileNotifications'];
+    privacySwitches.forEach(switchId => {
+        const element = document.getElementById(switchId);
+        if (element) {
+            element.addEventListener('change', function() {
+                if (!currentUser.settings) {
+                    currentUser.settings = {
+                        publicProfile: true,
+                        showEmail: false,
+                        fileNotifications: true
+                    };
+                }
+                
+                currentUser.settings[switchId] = this.checked;
+                
+                // Обновление в массиве пользователей
+                const userIndex = users.findIndex(u => u.id === currentUser.id);
+                if (userIndex !== -1) {
+                    if (!users[userIndex].settings) {
+                        users[userIndex].settings = currentUser.settings;
+                    } else {
+                        users[userIndex].settings[switchId] = this.checked;
+                    }
+                }
+                
+                saveData();
+                showNotification('Настройки приватности обновлены', 'success');
+            });
+        }
+    });
+    
+    // Переключение вкладок настроек
+    const settingsTabs = document.querySelectorAll('.settings-tab');
+    const settingsPanes = document.querySelectorAll('.settings-pane');
+    
+    settingsTabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            const tabName = this.dataset.tab;
+            
+            // Обновление активной вкладки
+            settingsTabs.forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Показ соответствующей панели
+            settingsPanes.forEach(pane => {
+                pane.classList.remove('active');
+                if (pane.id === `${tabName}Tab`) {
+                    pane.classList.add('active');
+                }
+            });
+        });
+    });
+    
+    // Выход из аккаунта
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            currentUser = null;
+            saveData();
+            updateUserUI();
+            showNotification('Вы вышли из аккаунта', 'success');
+            closeModal(modals.profile);
+            closeModal(modals.settings);
+        });
+    }
+    
+    // Кнопка "Загрузить еще"
+    const loadMoreBtn = document.getElementById('loadMoreBtn');
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    
+    if (loadMoreBtn) {
+        loadMoreBtn.addEventListener('click', function() {
+            this.style.display = 'none';
+            loadingIndicator.classList.add('active');
+            
+            // Имитация загрузки
+            setTimeout(() => {
+                loadingIndicator.classList.remove('active');
+                this.style.display = 'inline-flex';
+                showNotification('Больше файлов пока нет', 'info');
+            }, 1500);
+        });
+    }
+    
+    // Функция показа уведомлений
+    function showNotification(message, type = 'info') {
+        // Удаляем предыдущее уведомление
+        const existingNotification = document.querySelector('.notification');
+        if (existingNotification) {
+            existingNotification.remove();
+        }
+        
+        // Создаем уведомление
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.innerHTML = `
+            <div class="notification-content">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                <span>${message}</span>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Анимация появления
+        setTimeout(() => {
+            notification.classList.add('active');
+        }, 10);
+        
+        // Автоматическое скрытие
+        setTimeout(() => {
+            notification.classList.remove('active');
+            setTimeout(() => {
+                notification.remove();
+            }, 400);
+        }, 5000);
+    }
+    
+    // Инициализация при загрузке
+    initUI();
+    console.log('FileShare загружен и готов к работе!');
 });
-
-// Начальная прозрачность для анимации появления
-document.body.style.opacity = '0';
-document.body.style.transition = 'opacity 0.5s ease';
