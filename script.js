@@ -4,6 +4,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let files = JSON.parse(localStorage.getItem('files')) || [];
     let users = JSON.parse(localStorage.getItem('users')) || [];
     let categories = ['documents', 'images', 'audio', 'video', 'archives', 'software', 'other'];
+    let currentFilter = 'all';
+    let currentSort = 'newest';
+    let viewMode = 'grid';
     
     // DOM элементы
     const elements = {
@@ -18,30 +21,59 @@ document.addEventListener('DOMContentLoaded', function() {
         downloadsCount: document.getElementById('downloadsCount'),
         heroUploadBtn: document.getElementById('heroUploadBtn'),
         exploreBtn: document.getElementById('exploreBtn'),
-        loadMoreBtn: document.getElementById('loadMoreBtn')
+        loadMoreBtn: document.getElementById('loadMoreBtn'),
+        themeToggle: document.getElementById('themeToggle'),
+        footerThemeSelect: document.getElementById('footerThemeSelect'),
+        searchInput: document.getElementById('searchInput'),
+        searchBtn: document.getElementById('searchBtn'),
+        sortSelect: document.getElementById('sortSelect')
     };
     
     // Модальные окна
     const modals = {
         login: document.getElementById('loginModal'),
         register: document.getElementById('registerModal'),
-        upload: document.getElementById('uploadModal'),
-        profile: document.getElementById('profileModal'),
-        settings: document.getElementById('settingsModal')
+        upload: document.getElementById('uploadModal')
     };
     
     // Инициализация
     initApp();
     
     function initApp() {
+        loadTheme();
         updateUI();
         renderFiles();
         setupEventListeners();
         updateStats();
+        updateCategoryCounts();
         
         // Если есть демо-пользователь, авторизуем его
         if (!currentUser && users.length === 0) {
             createDemoUser();
+        }
+    }
+    
+    function loadTheme() {
+        const savedTheme = localStorage.getItem('theme') || 'dark';
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        
+        if (savedTheme === 'auto') {
+            document.body.className = prefersDark ? 'dark-theme' : 'light-theme';
+        } else {
+            document.body.className = savedTheme + '-theme';
+        }
+        
+        updateThemeIcon();
+        if (elements.footerThemeSelect) {
+            elements.footerThemeSelect.value = savedTheme;
+        }
+    }
+    
+    function updateThemeIcon() {
+        const themeIcon = elements.themeToggle?.querySelector('i');
+        if (themeIcon) {
+            themeIcon.className = document.body.classList.contains('dark-theme') ? 
+                'fas fa-sun' : 'fas fa-moon';
         }
     }
     
@@ -54,9 +86,9 @@ document.addEventListener('DOMContentLoaded', function() {
             bio: 'Демонстрационный пользователь',
             avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=demo',
             banner: 'linear-gradient(135deg, #4361ee, #f72585)',
-            uploads: 0,
-            downloads: 0,
-            likes: 0,
+            uploads: 3,
+            downloads: 85,
+            likes: 42,
             createdAt: new Date().toISOString()
         };
         
@@ -99,6 +131,16 @@ document.addEventListener('DOMContentLoaded', function() {
         animateNumber(elements.downloadsCount, totalDownloads);
     }
     
+    function updateCategoryCounts() {
+        categories.forEach(category => {
+            const count = files.filter(file => file.category === category).length;
+            const element = document.getElementById(`count-${category}`);
+            if (element) {
+                element.textContent = count;
+            }
+        });
+    }
+    
     function animateNumber(element, target) {
         let current = parseInt(element.textContent) || 0;
         const increment = Math.ceil((target - current) / 50);
@@ -112,17 +154,25 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 20);
     }
     
-    function renderFiles(filteredFiles = files) {
+    function renderFiles(filteredFiles = null) {
+        let filesToRender = filteredFiles || files;
+        
+        // Применяем фильтр
+        filesToRender = applyFilter(filesToRender, currentFilter);
+        
+        // Применяем сортировку
+        filesToRender = applySort(filesToRender, currentSort);
+        
         elements.filesContainer.innerHTML = '';
         
-        if (filteredFiles.length === 0) {
+        if (filesToRender.length === 0) {
             elements.filesContainer.innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-folder-open"></i>
                     <h3>Файлы не найдены</h3>
-                    <p>Будьте первым, кто загрузит файл!</p>
+                    <p>Попробуйте изменить параметры поиска или фильтрации</p>
                     <button class="btn btn-primary" id="emptyUploadBtn">
-                        <i class="fas fa-cloud-upload-alt"></i> Загрузить файл
+                        <i class="fas fa-cloud-upload-alt"></i> Загрузить первый файл
                     </button>
                 </div>
             `;
@@ -139,9 +189,44 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        filteredFiles.forEach(file => {
+        filesToRender.forEach(file => {
             const fileCard = createFileCard(file);
             elements.filesContainer.appendChild(fileCard);
+        });
+        
+        // Применяем режим просмотра
+        elements.filesContainer.className = `files-grid ${viewMode}-view`;
+    }
+    
+    function applyFilter(filesList, filter) {
+        switch(filter) {
+            case 'popular':
+                return filesList.filter(file => file.downloads >= 10);
+            case 'recent':
+                const weekAgo = new Date();
+                weekAgo.setDate(weekAgo.getDate() - 7);
+                return filesList.filter(file => new Date(file.uploadedAt) > weekAgo);
+            default:
+                return filesList;
+        }
+    }
+    
+    function applySort(filesList, sort) {
+        return [...filesList].sort((a, b) => {
+            switch(sort) {
+                case 'newest':
+                    return new Date(b.uploadedAt) - new Date(a.uploadedAt);
+                case 'oldest':
+                    return new Date(a.uploadedAt) - new Date(b.uploadedAt);
+                case 'downloads':
+                    return (b.downloads || 0) - (a.downloads || 0);
+                case 'likes':
+                    return (b.likes?.length || 0) - (a.likes?.length || 0);
+                case 'name':
+                    return a.name.localeCompare(b.name);
+                default:
+                    return 0;
+            }
         });
     }
     
@@ -150,7 +235,6 @@ document.addEventListener('DOMContentLoaded', function() {
         card.className = 'file-card';
         card.dataset.id = file.id;
         
-        // Определяем иконку по типу файла
         let iconClass = 'fas fa-file';
         let fileType = getFileType(file.name);
         
@@ -166,8 +250,8 @@ document.addEventListener('DOMContentLoaded', function() {
             case 'powerpoint': iconClass = 'fas fa-file-powerpoint'; break;
         }
         
-        // Проверяем лайк текущего пользователя
         const isLiked = currentUser && file.likes && file.likes.includes(currentUser.id);
+        const tags = file.tags || [];
         
         card.innerHTML = `
             <div class="file-icon">
@@ -179,11 +263,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="file-meta">
                     <span><i class="fas fa-weight-hanging"></i> ${formatFileSize(file.size)}</span>
                     <span><i class="fas fa-user"></i> ${file.author}</span>
-                    <span><i class="far fa-calendar"></i> ${new Date(file.uploadedAt).toLocaleDateString()}</span>
+                    <span><i class="far fa-calendar"></i> ${new Date(file.uploadedAt).toLocaleDateString('ru-RU')}</span>
+                    <span><i class="fas fa-folder"></i> ${getCategoryName(file.category)}</span>
                 </div>
+                ${tags.length > 0 ? `
                 <div class="file-tags">
-                    ${file.tags ? file.tags.map(tag => `<span class="tag">${tag}</span>`).join('') : ''}
+                    ${tags.map(tag => `<span class="tag">${tag.trim()}</span>`).join('')}
                 </div>
+                ` : ''}
             </div>
             <div class="file-actions">
                 <button class="download-btn" data-file-id="${file.id}">
@@ -197,6 +284,19 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         
         return card;
+    }
+    
+    function getCategoryName(category) {
+        const categoryNames = {
+            'documents': 'Документы',
+            'images': 'Изображения',
+            'audio': 'Аудио',
+            'video': 'Видео',
+            'archives': 'Архивы',
+            'software': 'Программы',
+            'other': 'Другое'
+        };
+        return categoryNames[category] || 'Другое';
     }
     
     function getFileType(filename) {
@@ -227,7 +327,6 @@ document.addEventListener('DOMContentLoaded', function() {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
     
-    // Реальное скачивание файлов
     function downloadFile(fileId) {
         const file = files.find(f => f.id === fileId);
         if (!file) {
@@ -248,21 +347,18 @@ document.addEventListener('DOMContentLoaded', function() {
             downloadBtn.disabled = true;
         }
         
-        // Имитация загрузки (в реальном приложении здесь был бы запрос к серверу)
         setTimeout(() => {
-            // Создаем реальный файл для скачивания
             let blobContent;
             let mimeType = 'application/octet-stream';
+            let filename = file.name;
             
-            // В зависимости от типа файла создаем соответствующее содержимое
             switch(getFileType(file.name)) {
                 case 'pdf':
                     mimeType = 'application/pdf';
-                    blobContent = '%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n2 0 obj\n<<\n/Type /Pages\n/Kids [3 0 R]\n/Count 1\n>>\nendobj\n3 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/MediaBox [0 0 612 792]\n/Contents 4 0 R\n>>\nendobj\n4 0 obj\n<<\n/Length 44\n>>\nstream\nBT\n/F1 12 Tf\n72 720 Td\n(FileShare - ' + file.name + ') Tj\nET\nendstream\nendobj\nxref\n0 5\n0000000000 65535 f\n0000000010 00000 n\n0000000053 00000 n\n0000000102 00000 n\n0000000172 00000 n\ntrailer\n<<\n/Size 5\n/Root 1 0 R\n>>\nstartxref\n235\n%%EOF';
+                    blobContent = `%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n2 0 obj\n<<\n/Type /Pages\n/Kids [3 0 R]\n/Count 1\n>>\nendobj\n3 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/MediaBox [0 0 612 792]\n/Contents 4 0 R\n>>\nendobj\n4 0 obj\n<<\n/Length 44\n>>\nstream\nBT\n/F1 12 Tf\n72 720 Td\n(FileShare - ${file.name}) Tj\nET\nendstream\nendobj\nxref\n0 5\n0000000000 65535 f\n0000000010 00000 n\n0000000053 00000 n\n0000000102 00000 n\n0000000172 00000 n\ntrailer\n<<\n/Size 5\n/Root 1 0 R\n>>\nstartxref\n235\n%%EOF`;
                     break;
                 case 'image':
                     mimeType = 'image/png';
-                    // Создаем простую картинку с текстом
                     const canvas = document.createElement('canvas');
                     canvas.width = 400;
                     canvas.height = 300;
@@ -276,18 +372,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     ctx.fillText(file.name, 200, 160);
                     ctx.fillText('Создано с помощью FileShare', 200, 200);
                     blobContent = canvas.toDataURL('image/png').split(',')[1];
+                    filename = file.name.endsWith('.png') ? file.name : file.name + '.png';
                     break;
                 case 'text':
                 default:
                     mimeType = 'text/plain';
-                    blobContent = `FileShare - ${file.name}\n\nОписание: ${file.description || 'Нет описания'}\nАвтор: ${file.author}\nДата загрузки: ${new Date(file.uploadedAt).toLocaleString()}\nРазмер: ${formatFileSize(file.size)}\n\nСпасибо за использование FileShare!`;
+                    blobContent = `FileShare - ${file.name}\n\nОписание: ${file.description || 'Нет описания'}\nАвтор: ${file.author}\nДата загрузки: ${new Date(file.uploadedAt).toLocaleString('ru-RU')}\nРазмер: ${formatFileSize(file.size)}\n\nСпасибо за использование FileShare!`;
+                    filename = file.name.endsWith('.txt') ? file.name : file.name + '.txt';
                     break;
             }
             
-            // Создаем Blob и скачиваем
             let blob;
             if (mimeType === 'image/png') {
-                // Для PNG нужно декодировать base64
                 const byteCharacters = atob(blobContent);
                 const byteNumbers = new Array(byteCharacters.length);
                 for (let i = 0; i < byteCharacters.length; i++) {
@@ -302,16 +398,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = file.name;
+            a.download = filename;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             
-            // Обновляем статистику
             file.downloads = (file.downloads || 0) + 1;
             
-            // Обновляем статистику пользователя
             if (currentUser) {
                 const userIndex = users.findIndex(u => u.id === currentUser.id);
                 if (userIndex !== -1) {
@@ -320,11 +414,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
             
-            // Сохраняем изменения
             saveData();
             updateStats();
+            renderFiles();
             
-            // Обновляем кнопку
             if (downloadBtn) {
                 setTimeout(() => {
                     downloadBtn.classList.remove('downloading');
@@ -335,10 +428,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             showNotification(`Файл "${file.name}" успешно скачан!`, 'success');
             
-        }, 1500); // Имитация задержки скачивания
+        }, 1500);
     }
     
-    // Лайки
     function toggleLike(fileId) {
         if (!currentUser) {
             showNotification('Для оценки файлов необходимо войти в систему', 'error');
@@ -355,17 +447,13 @@ document.addEventListener('DOMContentLoaded', function() {
         const isLiked = likeIndex !== -1;
         
         if (isLiked) {
-            // Убираем лайк
             file.likes.splice(likeIndex, 1);
         } else {
-            // Добавляем лайк
             file.likes.push(currentUser.id);
         }
         
-        // Сохраняем изменения
         saveData();
         
-        // Обновляем UI
         const likeBtn = document.querySelector(`.like-btn[data-file-id="${fileId}"]`);
         const likeCount = likeBtn.querySelector('.like-count');
         
@@ -373,7 +461,6 @@ document.addEventListener('DOMContentLoaded', function() {
             likeBtn.classList.remove('liked');
         } else {
             likeBtn.classList.add('liked');
-            // Анимация лайка
             likeBtn.style.transform = 'scale(1.2)';
             setTimeout(() => {
                 likeBtn.style.transform = 'scale(1)';
@@ -382,7 +469,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         likeCount.textContent = file.likes.length;
         
-        // Обновляем статистику пользователя
         if (currentUser) {
             const userIndex = users.findIndex(u => u.id === currentUser.id);
             if (userIndex !== -1) {
@@ -392,7 +478,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Загрузка файлов
     function uploadFile(fileData) {
         if (!currentUser) return;
         
@@ -412,7 +497,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         files.unshift(newFile);
         
-        // Обновляем статистику пользователя
         const userIndex = users.findIndex(u => u.id === currentUser.id);
         if (userIndex !== -1) {
             users[userIndex].uploads = (users[userIndex].uploads || 0) + 1;
@@ -421,6 +505,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         saveData();
         updateStats();
+        updateCategoryCounts();
         renderFiles();
         
         showNotification(`Файл "${fileData.name}" успешно загружен!`, 'success');
@@ -432,7 +517,6 @@ document.addEventListener('DOMContentLoaded', function() {
         localStorage.setItem('users', JSON.stringify(users));
     }
     
-    // Уведомления
     function showNotification(message, type = 'info') {
         const notification = document.getElementById('notification');
         notification.textContent = message;
@@ -443,7 +527,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 3000);
     }
     
-    // Модальные окна
     function openModal(modalName) {
         const modal = modals[modalName];
         if (modal) {
@@ -457,8 +540,67 @@ document.addEventListener('DOMContentLoaded', function() {
         document.body.style.overflow = 'auto';
     }
     
-    // Настройка обработчиков событий
     function setupEventListeners() {
+        // Переключение темы
+        elements.themeToggle?.addEventListener('click', toggleTheme);
+        elements.footerThemeSelect?.addEventListener('change', function() {
+            localStorage.setItem('theme', this.value);
+            loadTheme();
+        });
+        
+        // Переключение вью
+        document.querySelectorAll('.view-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                viewMode = this.dataset.view;
+                elements.filesContainer.className = `files-grid ${viewMode}-view`;
+            });
+        });
+        
+        // Сортировка
+        elements.sortSelect?.addEventListener('change', function() {
+            currentSort = this.value;
+            renderFiles();
+        });
+        
+        // Фильтры
+        document.querySelectorAll('.btn-filter').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                currentFilter = this.dataset.filter;
+                renderFiles();
+            });
+        });
+        
+        // Категории
+        document.querySelectorAll('.category-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const category = this.dataset.category;
+                const searchInput = document.getElementById('searchInput');
+                searchInput.value = '';
+                searchInput.focus();
+                
+                // Фильтруем по категории
+                const filteredFiles = files.filter(f => f.category === category);
+                renderFiles(filteredFiles);
+                
+                document.querySelectorAll('.category-card').forEach(c => {
+                    c.style.borderColor = '';
+                });
+                this.style.borderColor = '#4361ee';
+            });
+        });
+        
+        // Поиск
+        elements.searchBtn?.addEventListener('click', performSearch);
+        elements.searchInput?.addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+        
         // Кнопки открытия модальных окон
         elements.loginBtn.addEventListener('click', () => openModal('login'));
         elements.registerBtn.addEventListener('click', () => openModal('register'));
@@ -478,37 +620,52 @@ document.addEventListener('DOMContentLoaded', function() {
                 openModal('upload');
             }
         });
+        elements.exploreBtn?.addEventListener('click', () => {
+            elements.searchInput.focus();
+        });
         
         // Профиль
-        document.getElementById('profileBtn')?.addEventListener('click', () => {
-            if (currentUser) {
-                openModal('profile');
-                updateProfileModal();
+        document.getElementById('profileBtn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            document.querySelector('.dropdown-menu').classList.toggle('show');
+        });
+        
+        // Закрытие dropdown при клике вне его
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.profile-menu')) {
+                document.querySelectorAll('.dropdown-menu').forEach(menu => {
+                    menu.classList.remove('show');
+                });
             }
         });
         
         document.getElementById('viewProfileBtn')?.addEventListener('click', (e) => {
             e.preventDefault();
+            showNotification('Функционал профиля в разработке', 'info');
+        });
+        
+        document.getElementById('myFilesBtn')?.addEventListener('click', (e) => {
+            e.preventDefault();
             if (currentUser) {
-                openModal('profile');
-                updateProfileModal();
+                const myFiles = files.filter(f => f.authorId === currentUser.id);
+                renderFiles(myFiles);
+                showNotification(`Показаны ваши файлы (${myFiles.length})`, 'success');
             }
         });
         
         document.getElementById('settingsBtn')?.addEventListener('click', (e) => {
             e.preventDefault();
-            if (currentUser) {
-                openModal('settings');
-            }
+            showNotification('Настройки в разработке', 'info');
         });
         
         document.getElementById('logoutBtn')?.addEventListener('click', (e) => {
             e.preventDefault();
-            currentUser = null;
-            saveData();
-            updateUI();
-            showNotification('Вы вышли из системы', 'success');
-            closeModal(modals.profile);
+            if (confirm('Вы уверены, что хотите выйти?')) {
+                currentUser = null;
+                saveData();
+                updateUI();
+                showNotification('Вы вышли из системы', 'success');
+            }
         });
         
         // Закрытие модальных окон
@@ -524,6 +681,19 @@ document.addEventListener('DOMContentLoaded', function() {
             if (e.target.classList.contains('modal')) {
                 closeModal(e.target);
             }
+        });
+        
+        // Переключение между логином и регистрацией
+        document.getElementById('showRegister')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeModal(modals.login);
+            openModal('register');
+        });
+        
+        document.getElementById('showLogin')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeModal(modals.register);
+            openModal('login');
         });
         
         // Форма входа
@@ -568,7 +738,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const password = document.getElementById('regPassword').value;
             const confirmPassword = document.getElementById('regConfirmPassword').value;
             
-            // Валидация
             if (password !== confirmPassword) {
                 showNotification('Пароли не совпадают', 'error');
                 return;
@@ -579,16 +748,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Проверка существования пользователя
+            if (username.length < 3) {
+                showNotification('Логин должен содержать минимум 3 символа', 'error');
+                return;
+            }
+            
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                showNotification('Введите корректный email', 'error');
+                return;
+            }
+            
             const userExists = users.some(u => u.username === username || u.email === email);
             if (userExists) {
                 showNotification('Пользователь с таким именем или email уже существует', 'error');
                 return;
             }
             
-            // Создание нового пользователя
             const newUser = {
-                id: users.length + 1,
+                id: Date.now(),
                 username,
                 email,
                 password,
@@ -617,7 +795,7 @@ document.addEventListener('DOMContentLoaded', function() {
             saveData();
             updateUI();
             updateStats();
-            showNotification('Регистрация успешна!', 'success');
+            showNotification('Регистрация успешна! Добро пожаловать!', 'success');
             closeModal(modals.register);
             this.reset();
         });
@@ -634,6 +812,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const fileName = document.getElementById('fileName').value;
             const fileDescription = document.getElementById('fileDescription').value;
             const fileCategory = document.getElementById('fileCategory').value;
+            const fileTags = document.getElementById('fileTags').value;
             const fileInput = document.getElementById('fileInput');
             
             if (!fileName || !fileCategory || !fileInput.files[0]) {
@@ -642,14 +821,13 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             const file = fileInput.files[0];
-            const maxSize = 100 * 1024 * 1024; // 100MB
+            const maxSize = 100 * 1024 * 1024;
             
             if (file.size > maxSize) {
                 showNotification('Файл слишком большой. Максимальный размер: 100MB', 'error');
                 return;
             }
             
-            // Показываем прогресс загрузки
             const progressFill = document.getElementById('progressFill');
             const progressText = document.getElementById('progressText');
             const uploadProgress = document.getElementById('uploadProgress');
@@ -658,7 +836,6 @@ document.addEventListener('DOMContentLoaded', function() {
             uploadProgress.style.display = 'block';
             uploadSubmitBtn.disabled = true;
             
-            // Имитация загрузки с прогрессом
             let progress = 0;
             const progressInterval = setInterval(() => {
                 progress += Math.random() * 20;
@@ -666,22 +843,22 @@ document.addEventListener('DOMContentLoaded', function() {
                     progress = 100;
                     clearInterval(progressInterval);
                     
-                    // Загружаем файл
+                    const tags = fileTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+                    
                     uploadFile({
                         name: fileName,
                         description: fileDescription,
                         category: fileCategory,
                         size: file.size,
-                        tags: []
+                        tags: tags
                     });
                     
-                    // Сбрасываем форму
                     this.reset();
+                    document.getElementById('fileInfo').textContent = '';
                     uploadProgress.style.display = 'none';
                     uploadSubmitBtn.disabled = false;
                     closeModal(modals.upload);
                     
-                    // Сбрасываем прогресс
                     setTimeout(() => {
                         progressFill.style.width = '0%';
                         progressText.textContent = '0%';
@@ -719,7 +896,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('fileInfo').textContent = 
                         `Выбран файл: ${file.name} (${formatFileSize(file.size)})`;
                     
-                    // Автозаполнение названия
                     const fileNameInput = document.getElementById('fileName');
                     if (!fileNameInput.value) {
                         fileNameInput.value = file.name.replace(/\.[^/.]+$/, "");
@@ -735,52 +911,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('fileInfo').textContent = 
                     `Выбран файл: ${file.name} (${formatFileSize(file.size)})`;
                 
-                // Автозаполнение названия
                 const fileNameInput = document.getElementById('fileName');
                 if (!fileNameInput.value) {
                     fileNameInput.value = file.name.replace(/\.[^/.]+$/, "");
                 }
             }
         });
-        
-        // Категории
-        document.querySelectorAll('.category-card').forEach(card => {
-            card.addEventListener('click', function() {
-                const category = this.dataset.category;
-                const filteredFiles = files.filter(f => f.category === category);
-                renderFiles(filteredFiles);
-                
-                // Подсветка активной категории
-                document.querySelectorAll('.category-card').forEach(c => {
-                    c.style.borderColor = '';
-                });
-                this.style.borderColor = '#4361ee';
-            });
-        });
-        
-        // Поиск
-        document.getElementById('searchBtn')?.addEventListener('click', performSearch);
-        document.getElementById('searchInput')?.addEventListener('keyup', function(e) {
-            if (e.key === 'Enter') {
-                performSearch();
-            }
-        });
-        
-        function performSearch() {
-            const query = document.getElementById('searchInput').value.toLowerCase();
-            if (!query) {
-                renderFiles();
-                return;
-            }
-            
-            const filteredFiles = files.filter(file => 
-                file.name.toLowerCase().includes(query) ||
-                file.description.toLowerCase().includes(query) ||
-                file.author.toLowerCase().includes(query)
-            );
-            
-            renderFiles(filteredFiles);
-        }
         
         // Кнопка "Показать еще"
         elements.loadMoreBtn?.addEventListener('click', () => {
@@ -802,164 +938,46 @@ document.addEventListener('DOMContentLoaded', function() {
                 toggleLike(fileId);
                 return;
             }
-        });
-        
-        // Профиль: редактирование био
-        document.getElementById('editBioBtn')?.addEventListener('click', function() {
-            document.getElementById('editBioForm').style.display = 'block';
-            this.style.display = 'none';
-            document.getElementById('bioTextarea').value = 
-                document.getElementById('currentBio').textContent;
-        });
-        
-        document.getElementById('saveBioBtn')?.addEventListener('click', function() {
-            const newBio = document.getElementById('bioTextarea').value;
-            document.getElementById('currentBio').textContent = newBio;
-            document.getElementById('editBioForm').style.display = 'none';
-            document.getElementById('editBioBtn').style.display = 'flex';
             
-            if (currentUser) {
-                currentUser.bio = newBio;
-                const userIndex = users.findIndex(u => u.id === currentUser.id);
-                if (userIndex !== -1) {
-                    users[userIndex].bio = newBio;
-                    saveData();
-                }
+            const tag = e.target.closest('.tag');
+            if (tag) {
+                const tagText = tag.textContent;
+                const searchInput = document.getElementById('searchInput');
+                searchInput.value = tagText;
+                performSearch();
             }
-            
-            showNotification('Информация обновлена', 'success');
-        });
-        
-        document.getElementById('cancelBioBtn')?.addEventListener('click', function() {
-            document.getElementById('editBioForm').style.display = 'none';
-            document.getElementById('editBioBtn').style.display = 'flex';
-        });
-        
-        // Смена аватара
-        document.getElementById('changeAvatarBtn')?.addEventListener('click', function() {
-            const newSeed = Math.random().toString(36).substring(7);
-            const newAvatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${newSeed}`;
-            
-            document.querySelector('#profileAvatar img').src = newAvatar;
-            document.querySelectorAll('.avatar').forEach(img => {
-                if (img.tagName === 'IMG') {
-                    img.src = newAvatar;
-                }
-            });
-            
-            if (currentUser) {
-                currentUser.avatar = newAvatar;
-                const userIndex = users.findIndex(u => u.id === currentUser.id);
-                if (userIndex !== -1) {
-                    users[userIndex].avatar = newAvatar;
-                    saveData();
-                }
-            }
-            
-            showNotification('Аватар обновлен', 'success');
-        });
-        
-        // Смена баннера
-        document.getElementById('changeBannerBtn')?.addEventListener('click', function() {
-            const gradients = [
-                'linear-gradient(135deg, #4361ee, #f72585)',
-                'linear-gradient(135deg, #7209b7, #3a0ca3)',
-                'linear-gradient(135deg, #f72585, #4cc9f0)',
-                'linear-gradient(135deg, #4cc9f0, #4361ee)',
-                'linear-gradient(135deg, #ff9e00, #ef233c)'
-            ];
-            
-            const randomGradient = gradients[Math.floor(Math.random() * gradients.length)];
-            document.getElementById('profileBanner').style.background = randomGradient;
-            
-            if (currentUser) {
-                currentUser.banner = randomGradient;
-                const userIndex = users.findIndex(u => u.id === currentUser.id);
-                if (userIndex !== -1) {
-                    users[userIndex].banner = randomGradient;
-                    saveData();
-                }
-            }
-            
-            showNotification('Баннер обновлен', 'success');
-        });
-        
-        // Настройки: смена пароля
-        document.getElementById('passwordForm')?.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const currentPassword = document.getElementById('currentPassword').value;
-            const newPassword = document.getElementById('newPassword').value;
-            const confirmNewPassword = document.getElementById('confirmNewPassword').value;
-            
-            if (!currentUser) {
-                showNotification('Ошибка авторизации', 'error');
-                return;
-            }
-            
-            // Проверка текущего пароля
-            const user = users.find(u => u.id === currentUser.id);
-            if (!user || user.password !== currentPassword) {
-                showNotification('Текущий пароль неверен', 'error');
-                return;
-            }
-            
-            if (newPassword !== confirmNewPassword) {
-                showNotification('Новые пароли не совпадают', 'error');
-                return;
-            }
-            
-            if (newPassword.length < 6) {
-                showNotification('Новый пароль должен содержать минимум 6 символов', 'error');
-                return;
-            }
-            
-            // Обновление пароля
-            user.password = newPassword;
-            saveData();
-            
-            showNotification('Пароль успешно изменен', 'success');
-            this.reset();
-        });
-        
-        // Настройки: переключение вкладок
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const tabName = this.dataset.tab;
-                
-                // Обновляем активные вкладки
-                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.classList.remove('active');
-                });
-                document.getElementById(tabName + 'Tab').classList.add('active');
-            });
         });
     }
     
-    function updateProfileModal() {
-        if (!currentUser) return;
-        
-        document.getElementById('profileUserName').textContent = currentUser.username;
-        document.getElementById('profileUserEmail').textContent = currentUser.email;
-        document.getElementById('currentBio').textContent = currentUser.bio || 'Пока нет информации о себе';
-        
-        const profileAvatar = document.querySelector('#profileAvatar img');
-        if (profileAvatar) {
-            profileAvatar.src = currentUser.avatar;
+    function performSearch() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        if (!query.trim()) {
+            renderFiles();
+            return;
         }
         
-        const profileBanner = document.getElementById('profileBanner');
-        if (profileBanner) {
-            profileBanner.style.background = currentUser.banner;
-        }
+        const filteredFiles = files.filter(file => 
+            file.name.toLowerCase().includes(query) ||
+            file.description.toLowerCase().includes(query) ||
+            file.author.toLowerCase().includes(query) ||
+            (file.tags && file.tags.some(tag => tag.toLowerCase().includes(query))) ||
+            file.category.toLowerCase().includes(query)
+        );
         
-        // Обновление статистики
-        document.getElementById('userUploadsCount').textContent = currentUser.uploads || 0;
-        document.getElementById('userDownloadsCount').textContent = currentUser.downloads || 0;
-        document.getElementById('userLikesCount').textContent = currentUser.likes || 0;
+        renderFiles(filteredFiles);
+        
+        if (filteredFiles.length === 0) {
+            showNotification('По вашему запросу ничего не найдено', 'info');
+        } else {
+            showNotification(`Найдено файлов: ${filteredFiles.length}`, 'success');
+        }
+    }
+    
+    function toggleTheme() {
+        const isDark = document.body.classList.contains('dark-theme');
+        document.body.className = isDark ? 'light-theme' : 'dark-theme';
+        localStorage.setItem('theme', isDark ? 'light' : 'dark');
+        updateThemeIcon();
     }
     
     // Создаем несколько демо-файлов при первом запуске
@@ -968,7 +986,7 @@ document.addEventListener('DOMContentLoaded', function() {
             {
                 id: 1,
                 name: 'Презентация проекта.pdf',
-                description: 'Подробная презентация нового IT-проекта',
+                description: 'Подробная презентация нового IT-проекта с анализом рынка и финансовыми прогнозами',
                 category: 'documents',
                 size: 4500000,
                 author: 'admin',
@@ -976,25 +994,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 uploadedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
                 downloads: 42,
                 likes: [1],
-                tags: ['работа', 'презентация', 'проект']
+                tags: ['работа', 'презентация', 'проект', 'анализ']
             },
             {
                 id: 2,
                 name: 'Градиенты для дизайна.jpg',
-                description: 'Коллекция красивых градиентов для веб-дизайна',
+                description: 'Коллекция красивых градиентов для веб-дизайна и мобильных приложений',
                 category: 'images',
                 size: 2500000,
                 author: 'admin',
                 authorId: 1,
                 uploadedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
                 downloads: 28,
-                likes: [1],
-                tags: ['дизайн', 'градиент', 'фон']
+                likes: [1, 2],
+                tags: ['дизайн', 'градиент', 'фон', 'цвет']
             },
             {
                 id: 3,
                 name: 'Музыка для видео.mp3',
-                description: 'Фоновая музыка для видеороликов',
+                description: 'Фоновая музыка для видеороликов без авторских отчислений',
                 category: 'audio',
                 size: 8500000,
                 author: 'admin',
@@ -1002,7 +1020,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 uploadedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
                 downloads: 15,
                 likes: [],
-                tags: ['музыка', 'аудио', 'фон']
+                tags: ['музыка', 'аудио', 'фон', 'видео']
+            },
+            {
+                id: 4,
+                name: 'Руководство по JavaScript.pdf',
+                description: 'Полное руководство по JavaScript с примерами и упражнениями',
+                category: 'documents',
+                size: 3200000,
+                author: 'demo',
+                authorId: 1,
+                uploadedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+                downloads: 56,
+                likes: [1, 2, 3],
+                tags: ['программирование', 'javascript', 'учебник', 'веб']
+            },
+            {
+                id: 5,
+                name: 'Иконки для сайта.zip',
+                description: 'Набор иконок в формате SVG для веб-разработки',
+                category: 'archives',
+                size: 1500000,
+                author: 'demo',
+                authorId: 1,
+                uploadedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+                downloads: 33,
+                likes: [1],
+                tags: ['иконки', 'svg', 'дизайн', 'веб']
             }
         ];
         
