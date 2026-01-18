@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FileShare | Обмен файлами</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📁</text></svg>">
+</head>
+<body>
+    <!-- Шапка сайта -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-folder-open"></i>
+                    <h1>File<span>Share</span></h1>
+                </div>
+                
+                <!-- Поиск -->
+                <div class="search-container">
+                    <input type="text" id="searchInput" placeholder="Поиск файлов по названию, теме или автору...">
+                    <button id="searchBtn"><i class="fas fa-search"></i></button>
+                </div>
+                
+                <!-- Кнопки пользователя -->
+                <div class="user-controls">
+                    <button class="btn btn-login" id="loginBtn">
+                        <i class="fas fa-sign-in-alt"></i> Войти
+                    </button>
+                    <button class="btn btn-register" id="registerBtn">
+                        <i class="fas fa-user-plus"></i> Регистрация
+                    </button>
+                    <button class="btn btn-upload" id="uploadBtn">
+                        <i class="fas fa-cloud-upload-alt"></i> Загрузить
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Модальные окна -->
+    <div class="modal" id="loginModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2><i class="fas fa-sign-in-alt"></i> Вход в аккаунт</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <input type="text" id="loginUsername" placeholder="Никнейм или email" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="loginPassword" placeholder="Пароль" required>
+                </div>
+                <button type="submit" class="btn btn-login">Войти</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="registerModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2><i class="fas fa-user-plus"></i> Регистрация</h2>
+            <form id="registerForm">
+                <div class="form-group">
+                    <input type="text" id="regUsername" placeholder="Никнейм" required>
+                </div>
+                <div class="form-group">
+                    <input type="email" id="regEmail" placeholder="Email" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="regPassword" placeholder="Пароль" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="regConfirmPassword" placeholder="Повторите пароль" required>
+                </div>
+                <button type="submit" class="btn btn-register">Зарегистрироваться</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="modal" id="uploadModal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2><i class="fas fa-cloud-upload-alt"></i> Загрузить файл</h2>
+            <form id="uploadForm">
+                <div class="form-group">
+                    <input type="text" id="fileName" placeholder="Название файла" required>
+                </div>
+                <div class="form-group">
+                    <textarea id="fileDescription" placeholder="Описание файла" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="fileCategory">Категория:</label>
+                    <select id="fileCategory" required>
+                        <option value="">Выберите категорию</option>
+                        <option value="documents">Документы</option>
+                        <option value="images">Изображения</option>
+                        <option value="music">Музыка</option>
+                        <option value="video">Видео</option>
+                        <option value="archives">Архивы</option>
+                        <option value="software">Программы</option>
+                        <option value="other">Другое</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="fileTags">Теги (через запятую):</label>
+                    <input type="text" id="fileTags" placeholder="например, работа, презентация, 2023">
+                </div>
+                <div class="form-group file-upload">
+                    <input type="file" id="fileInput" required>
+                    <label for="fileInput" class="file-label">
+                        <i class="fas fa-file-upload"></i> Выберите файл
+                    </label>
+                    <div class="file-info" id="fileInfo">Файл не выбран</div>
+                </div>
+                <button type="submit" class="btn btn-upload">Загрузить файл</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Основной контент -->
+    <main class="main-content">
+        <div class="container">
+            <!-- Приветственный блок -->
+            <section class="hero">
+                <div class="hero-content">
+                    <h2>Обменивайтесь файлами с миром</h2>
+                    <p>Загружайте, делитесь и находите файлы по категориям. Без ограничений, без стикеров — только полезный контент.</p>
+                    <div class="hero-stats">
+                        <div class="stat">
+                            <i class="fas fa-users"></i>
+                            <div>
+                                <span class="stat-number" id="usersCount">1,245</span>
+                                <span class="stat-label">Пользователей</span>
+                            </div>
+                        </div>
+                        <div class="stat">
+                            <i class="fas fa-file"></i>
+                            <div>
+                                <span class="stat-number" id="filesCount">5,892</span>
+                                <span class="stat-label">Файлов</span>
+                            </div>
+                        </div>
+                        <div class="stat">
+                            <i class="fas fa-download"></i>
+                            <div>
+                                <span class="stat-number" id="downloadsCount">24,567</span>
+                                <span class="stat-label">Скачиваний</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-gradient"></div>
+            </section>
+
+            <!-- Категории файлов -->
+            <section class="categories">
+                <h2><i class="fas fa-folder"></i> Категории файлов</h2>
+                <div class="category-filters">
+                    <button class="category-filter active" data-category="all">Все файлы</button>
+                    <button class="category-filter" data-category="documents">
+                        <i class="fas fa-file-alt"></i> Документы
+                    </button>
+                    <button class="category-filter" data-category="images">
+                        <i class="fas fa-image"></i> Изображения
+                    </button>
+                    <button class="category-filter" data-category="music">
+                        <i class="fas fa-music"></i> Музыка
+                    </button>
+                    <button class="category-filter" data-category="video">
+                        <i class="fas fa-video"></i> Видео
+                    </button>
+                    <button class="category-filter" data-category="archives">
+                        <i class="fas fa-file-archive"></i> Архивы
+                    </button>
+                    <button class="category-filter" data-category="software">
+                        <i class="fas fa-code"></i> Программы
+                    </button>
+                </div>
+                
+                <!-- Список файлов -->
+                <div class="files-container">
+                    <div class="file-card" data-category="documents">
+                        <div class="file-icon">
+                            <i class="fas fa-file-pdf"></i>
+                        </div>
+                        <div class="file-info">
+                            <h3>Презентация проекта.pdf</h3>
+                            <p class="file-description">Подробная презентация нового IT-проекта с анализом рынка</p>
+                            <div class="file-meta">
+                                <span class="file-size"><i class="fas fa-weight-hanging"></i> 4.2 MB</span>
+                                <span class="file-author"><i class="fas fa-user"></i> alex_dev</span>
+                                <span class="file-date"><i class="far fa-calendar"></i> 15.10.2023</span>
+                            </div>
+                            <div class="file-tags">
+                                <span class="tag">работа</span>
+                                <span class="tag">презентация</span>
+                                <span class="tag">отчет</span>
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <button class="btn-download"><i class="fas fa-download"></i> Скачать</button>
+                            <span class="download-count"><i class="fas fa-download"></i> 128</span>
+                        </div>
+                    </div>
+                    
+                    <div class="file-card" data-category="images">
+                        <div class="file-icon">
+                            <i class="fas fa-file-image"></i>
+                        </div>
+                        <div class="file-info">
+                            <h3>Градиентные текстуры.jpg</h3>
+                            <p class="file-description">Коллекция оранжево-черных градиентов для дизайнеров</p>
+                            <div class="file-meta">
+                                <span class="file-size"><i class="fas fa-weight-hanging"></i> 8.7 MB</span>
+                                <span class="file-author"><i class="fas fa-user"></i> design_guru</span>
+                                <span class="file-date"><i class="far fa-calendar"></i> 12.10.2023</span>
+                            </div>
+                            <div class="file-tags">
+                                <span class="tag">дизайн</span>
+                                <span class="tag">градиент</span>
+                                <span class="tag">текстура</span>
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <button class="btn-download"><i class="fas fa-download"></i> Скачать</button>
+                            <span class="download-count"><i class="fas fa-download"></i> 89</span>
+                        </div>
+                    </div>
+                    
+                    <div class="file-card" data-category="music">
+                        <div class="file-icon">
+                            <i class="fas fa-file-audio"></i>
+                        </div>
+                        <div class="file-info">
+                            <h3>Электронная композиция.mp3</h3>
+                            <p class="file-description">Оригинальная музыка в стиле синтвейв для проектов</p>
+                            <div class="file-meta">
+                                <span class="file-size"><i class="fas fa-weight-hanging"></i> 6.5 MB</span>
+                                <span class="file-author"><i class="fas fa-user"></i> synth_master</span>
+                                <span class="file-date"><i class="far fa-calendar"></i> 10.10.2023</span>
+                            </div>
+                            <div class="file-tags">
+                                <span class="tag">музыка</span>
+                                <span class="tag">синтвейв</span>
+                                <span class="tag">бит</span>
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <button class="btn-download"><i class="fas fa-download"></i> Скачать</button>
+                            <span class="download-count"><i class="fas fa-download"></i> 156</span>
+                        </div>
+                    </div>
+                    
+                    <div class="file-card" data-category="video">
+                        <div class="file-icon">
+                            <i class="fas fa-file-video"></i>
+                        </div>
+                        <div class="file-info">
+                            <h3>Урок по веб-дизайну.mp4</h3>
+                            <p class="file-description">Видеоурок по созданию современных градиентов в CSS</p>
+                            <div class="file-meta">
+                                <span class="file-size"><i class="fas fa-weight-hanging"></i> 42.3 MB</span>
+                                <span class="file-author"><i class="fas fa-user"></i> web_teacher</span>
+                                <span class="file-date"><i class="far fa-calendar"></i> 08.10.2023</span>
+                            </div>
+                            <div class="file-tags">
+                                <span class="tag">обучение</span>
+                                <span class="tag">дизайн</span>
+                                <span class="tag">CSS</span>
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <button class="btn-download"><i class="fas fa-download"></i> Скачать</button>
+                            <span class="download-count"><i class="fas fa-download"></i> 203</span>
+                        </div>
+                    </div>
+                    
+                    <div class="file-card" data-category="software">
+                        <div class="file-icon">
+                            <i class="fas fa-file-code"></i>
+                        </div>
+                        <div class="file-info">
+                            <h3>Генератор градиентов.exe</h3>
+                            <p class="file-description">Программа для создания цветовых градиентов с предпросмотром</p>
+                            <div class="file-meta">
+                                <span class="file-size"><i class="fas fa-weight-hanging"></i> 12.1 MB</span>
+                                <span class="file-author"><i class="fas fa-user"></i> coder_pro</span>
+                                <span class="file-date"><i class="far fa-calendar"></i> 05.10.2023</span>
+                            </div>
+                            <div class="file-tags">
+                                <span class="tag">программа</span>
+                                <span class="tag">дизайн</span>
+                                <span class="tag">градиент</span>
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <button class="btn-download"><i class="fas fa-download"></i> Скачать</button>
+                            <span class="download-count"><i class="fas fa-download"></i> 312</span>
+                        </div>
+                    </div>
+                    
+                    <div class="file-card" data-category="archives">
+                        <div class="file-icon">
+                            <i class="fas fa-file-archive"></i>
+                        </div>
+                        <div class="file-info">
+                            <h3>Иконки для сайта.zip</h3>
+                            <p class="file-description">Коллекция векторных иконок в оранжевой цветовой гамме</p>
+                            <div class="file-meta">
+                                <span class="file-size"><i class="fas fa-weight-hanging"></i> 3.8 MB</span>
+                                <span class="file-author"><i class="fas fa-user"></i> icon_designer</span>
+                                <span class="file-date"><i class="far fa-calendar"></i> 02.10.2023</span>
+                            </div>
+                            <div class="file-tags">
+                                <span class="tag">иконки</span>
+                                <span class="tag">вектор</span>
+                                <span class="tag">дизайн</span>
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <button class="btn-download"><i class="fas fa-download"></i> Скачать</button>
+                            <span class="download-count"><i class="fas fa-download"></i> 167</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Индикатор загрузки -->
+                <div class="loading-indicator" id="loadingIndicator">
+                    <div class="spinner"></div>
+                    <p>Загрузка файлов...</p>
+                </div>
+                
+                <!-- Кнопка загрузить еще -->
+                <div class="load-more-container">
+                    <button class="btn btn-load-more" id="loadMoreBtn">
+                        <i class="fas fa-plus-circle"></i> Загрузить еще
+                    </button>
+                </div>
+            </section>
+            
+            <!-- Информация о сайте -->
+            <section class="info-section">
+                <div class="info-card">
+                    <i class="fas fa-shield-alt"></i>
+                    <h3>Безопасный обмен</h3>
+                    <p>Все файлы проверяются на вирусы перед публикацией</p>
+                </div>
+                <div class="info-card">
+                    <i class="fas fa-bolt"></i>
+                    <h3>Быстрые загрузки</h3>
+                    <p>Высокая скорость скачивания без ограничений</p>
+                </div>
+                <div class="info-card">
+                    <i class="fas fa-infinity"></i>
+                    <h3>Без ограничений</h3>
+                    <p>Загружайте файлы любого типа и размера</p>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Подвал -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <i class="fas fa-folder-open"></i>
+                    <h2>File<span>Share</span></h2>
+                    <p>Обмен файлами без границ</p>
+                </div>
+                <div class="footer-links">
+                    <h3>Категории</h3>
+                    <a href="#">Документы</a>
+                    <a href="#">Изображения</a>
+                    <a href="#">Музыка</a>
+                    <a href="#">Видео</a>
+                </div>
+                <div class="footer-links">
+                    <h3>Помощь</h3>
+                    <a href="#">Правила</a>
+                    <a href="#">FAQ</a>
+                    <a href="#">Контакты</a>
+                    <a href="#">О нас</a>
+                </div>
+                <div class="footer-social">
+                    <h3>Социальные сети</h3>
+                    <div class="social-icons">
+                        <a href="#"><i class="fab fa-telegram"></i></a>
+                        <a href="#"><i class="fab fa-vk"></i></a>
+                        <a href="#"><i class="fab fa-github"></i></a>
+                        <a href="#"><i class="fab fa-discord"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2023 FileShare. Все права защищены. Сайт создан для демонстрации.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
