@@ -1,728 +1,345 @@
-document.addEventListener('DOMContentLoaded', function() {
-    // Инициализация данных
-    let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
-    let files = JSON.parse(localStorage.getItem('files')) || [];
-    let users = JSON.parse(localStorage.getItem('users')) || [];
-    let categories = ['documents', 'images', 'audio', 'video', 'archives', 'software', 'other'];
-    let currentFilter = 'all';
-    let currentSort = 'newest';
-    let viewMode = 'grid';
-    let userSettings = JSON.parse(localStorage.getItem('userSettings')) || {
-        theme: 'dark',
-        fontSize: 'medium',
-        notifyDownloads: true,
-        notifyLikes: true
-    };
-    
-    // DOM элементы
-    const elements = {
-        loginBtn: document.getElementById('loginBtn'),
-        registerBtn: document.getElementById('registerBtn'),
-        uploadBtn: document.getElementById('uploadBtn'),
-        userProfile: document.getElementById('userProfile'),
-        userName: document.getElementById('userName'),
-        avatarContainer: document.getElementById('avatarContainer'),
-        filesContainer: document.getElementById('filesContainer'),
-        usersCount: document.getElementById('usersCount'),
-        filesCount: document.getElementById('filesCount'),
-        downloadsCount: document.getElementById('downloadsCount'),
-        heroUploadBtn: document.getElementById('heroUploadBtn'),
-        exploreBtn: document.getElementById('exploreBtn'),
-        refreshBtn: document.getElementById('refreshBtn'),
-        loadMoreBtn: document.getElementById('loadMoreBtn'),
-        themeToggle: document.getElementById('themeToggle'),
-        footerThemeSelect: document.getElementById('footerThemeSelect'),
-        searchInput: document.getElementById('searchInput'),
-        searchBtn: document.getElementById('searchBtn'),
-        sortSelect: document.getElementById('sortSelect')
-    };
-    
-    // Модальные окна
-    const modals = {
-        login: document.getElementById('loginModal'),
-        register: document.getElementById('registerModal'),
-        upload: document.getElementById('uploadModal'),
-        profile: document.getElementById('profileModal'),
-        stats: document.getElementById('statsModal'),
-        settings: document.getElementById('settingsModal')
-    };
-    
-    // Инициализация
-    initApp();
-    
-    function initApp() {
-        loadTheme();
-        loadSettings();
-        updateUI();
-        renderFiles();
-        setupEventListeners();
-        updateStats();
-        updateCategoryCounts();
-        
-        // Если есть демо-пользователь, авторизуем его
-        if (!currentUser && users.length === 0) {
-            createDemoUser();
-        }
+class FileSharePro {
+    constructor() {
+        this.init();
     }
-    
-    function loadTheme() {
-        const savedTheme = userSettings.theme || 'dark';
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        
-        if (savedTheme === 'auto') {
-            document.body.className = prefersDark ? 'dark-theme' : 'light-theme';
-        } else {
-            document.body.className = savedTheme + '-theme';
-        }
-        
-        updateThemeIcon();
-        if (elements.footerThemeSelect) {
-            elements.footerThemeSelect.value = savedTheme;
-        }
-        if (document.getElementById('themeSelect')) {
-            document.getElementById('themeSelect').value = savedTheme;
-        }
-    }
-    
-    function loadSettings() {
-        // Применяем настройки шрифта
-        const fontSize = userSettings.fontSize || 'medium';
-        document.body.style.fontSize = fontSize === 'small' ? '14px' : 
-                                      fontSize === 'large' ? '18px' : '16px';
-        
-        // Применяем другие настройки
-        if (document.getElementById('fontSize')) {
-            document.getElementById('fontSize').value = fontSize;
-        }
-        if (document.getElementById('notifyDownloads')) {
-            document.getElementById('notifyDownloads').checked = userSettings.notifyDownloads;
-        }
-        if (document.getElementById('notifyLikes')) {
-            document.getElementById('notifyLikes').checked = userSettings.notifyLikes;
-        }
-    }
-    
-    function generateAvatar(name) {
-        if (!name) return 'U';
-        const words = name.split(' ');
-        let initials = '';
-        
-        if (words.length >= 2) {
-            initials = words[0].charAt(0) + words[1].charAt(0);
-        } else {
-            initials = name.substring(0, 2);
-        }
-        
-        return initials.toUpperCase();
-    }
-    
-    function updateAvatar() {
-        if (currentUser) {
-            const avatarText = generateAvatar(currentUser.username);
-            const avatarElements = document.querySelectorAll('.avatar, .avatar-large');
-            avatarElements.forEach(el => {
-                el.textContent = avatarText;
-                
-                // Генерация цвета на основе имени
-                const colors = [
-                    '#4361ee', '#7209b7', '#f72585', '#4cc9f0', 
-                    '#06d6a0', '#ff9e00', '#ef233c', '#8338ec'
-                ];
-                const colorIndex = currentUser.username.length % colors.length;
-                el.style.background = colors[colorIndex];
-            });
-        }
-    }
-    
-    function updateThemeIcon() {
-        const themeIcon = elements.themeToggle?.querySelector('i');
-        if (themeIcon) {
-            themeIcon.className = document.body.classList.contains('dark-theme') ? 
-                'fas fa-sun' : 'fas fa-moon';
-        }
-    }
-    
-    function createDemoUser() {
-        const demoUser = {
-            id: 1,
-            username: 'Demo User',
-            email: 'demo@fileshare.com',
-            password: 'demo123',
-            bio: 'Демонстрационный пользователь FileShare',
-            uploads: 5,
-            downloads: 85,
-            likes: 42,
-            createdAt: new Date().toISOString()
+
+    async init() {
+        // Инициализация данных
+        this.currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
+        this.files = JSON.parse(localStorage.getItem('files')) || [];
+        this.users = JSON.parse(localStorage.getItem('users')) || [];
+        this.settings = JSON.parse(localStorage.getItem('settings')) || {
+            theme: 'dark',
+            autoSave: true,
+            notifications: true
         };
         
-        users.push(demoUser);
-        localStorage.setItem('users', JSON.stringify(users));
+        // DOM элементы
+        this.elements = {
+            loader: document.getElementById('loader'),
+            menuToggle: document.getElementById('menuToggle'),
+            sidebar: document.getElementById('sidebar'),
+            mainContent: document.getElementById('mainContent'),
+            themeToggle: document.getElementById('themeToggle'),
+            searchInput: document.getElementById('searchInput'),
+            uploadBtn: document.getElementById('uploadBtn'),
+            userMenu: document.getElementById('userMenu'),
+            uploadModal: document.getElementById('uploadModal'),
+            loginModal: document.getElementById('loginModal'),
+            registerModal: document.getElementById('registerModal'),
+            profileModal: document.getElementById('profileModal'),
+            notification: document.getElementById('notification'),
+            recentFilesGrid: document.getElementById('recentFilesGrid'),
+            allFilesGrid: document.getElementById('allFilesGrid'),
+            myFilesGrid: document.getElementById('myFilesGrid')
+        };
+
+        // Загрузка темы
+        this.loadTheme();
+        
+        // Инициализация демо-данных
+        if (this.users.length === 0) {
+            this.createDemoData();
+        }
+
+        // Настройка событий
+        this.setupEventListeners();
+        
+        // Обновление интерфейса
+        this.updateUI();
+        
+        // Загрузка файлов
+        this.loadFiles();
+        
+        // Обновление статистики
+        this.updateStats();
+        
+        // Скрытие лоадера
+        setTimeout(() => {
+            this.elements.loader.style.opacity = '0';
+            setTimeout(() => {
+                this.elements.loader.style.display = 'none';
+            }, 300);
+        }, 1000);
     }
-    
-    function updateUI() {
-        if (currentUser) {
-            elements.loginBtn.style.display = 'none';
-            elements.registerBtn.style.display = 'none';
-            elements.uploadBtn.style.display = 'flex';
-            elements.userProfile.style.display = 'block';
-            elements.userName.textContent = currentUser.username;
-            
-            updateAvatar();
-        } else {
-            elements.loginBtn.style.display = 'flex';
-            elements.registerBtn.style.display = 'flex';
-            elements.uploadBtn.style.display = 'none';
-            elements.userProfile.style.display = 'none';
+
+    loadTheme() {
+        document.body.className = this.settings.theme + '-theme';
+        const icon = this.elements.themeToggle?.querySelector('i');
+        if (icon) {
+            icon.className = this.settings.theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
         }
     }
-    
-    function updateStats() {
-        elements.usersCount.textContent = users.length;
-        elements.filesCount.textContent = files.length;
-        const totalDownloads = files.reduce((sum, file) => sum + (file.downloads || 0), 0);
-        elements.downloadsCount.textContent = totalDownloads;
-        
-        // Анимация чисел
-        animateNumber(elements.usersCount, users.length);
-        animateNumber(elements.filesCount, files.length);
-        animateNumber(elements.downloadsCount, totalDownloads);
-    }
-    
-    function updateCategoryCounts() {
-        categories.forEach(category => {
-            const count = files.filter(file => file.category === category).length;
-            const element = document.getElementById(`count-${category}`);
-            if (element) {
-                element.textContent = count;
+
+    createDemoData() {
+        const demoUsers = [
+            {
+                id: 1,
+                username: 'Admin',
+                email: 'admin@fileshare.com',
+                password: 'admin123',
+                avatar: 'AD',
+                bio: 'Системный администратор',
+                role: 'admin',
+                storage: 10737418240, // 10GB
+                usedStorage: 2147483648, // 2GB
+                uploads: 15,
+                downloads: 120,
+                likes: 45,
+                joinDate: '2024-01-01'
+            },
+            {
+                id: 2,
+                username: 'Demo User',
+                email: 'demo@fileshare.com',
+                password: 'demo123',
+                avatar: 'DU',
+                bio: 'Демонстрационный пользователь',
+                role: 'user',
+                storage: 5368709120, // 5GB
+                usedStorage: 1073741824, // 1GB
+                uploads: 8,
+                downloads: 65,
+                likes: 23,
+                joinDate: '2024-02-15'
             }
-        });
-    }
-    
-    function animateNumber(element, target) {
-        let current = parseInt(element.textContent) || 0;
-        const increment = Math.ceil((target - current) / 50);
-        const timer = setInterval(() => {
-            current += increment;
-            if ((increment > 0 && current >= target) || (increment < 0 && current <= target)) {
-                current = target;
-                clearInterval(timer);
+        ];
+
+        const demoFiles = [
+            {
+                id: 1,
+                name: 'Презентация проекта.pdf',
+                description: 'Подробная презентация нового IT-проекта',
+                category: 'documents',
+                size: 5242880, // 5MB
+                authorId: 1,
+                author: 'Admin',
+                uploadDate: '2024-03-15',
+                downloads: 42,
+                likes: 15,
+                tags: ['работа', 'презентация', 'проект'],
+                extension: '.pdf',
+                thumbnail: '📄'
+            },
+            {
+                id: 2,
+                name: 'Логотип компании.png',
+                description: 'Векторный логотип компании в высоком разрешении',
+                category: 'images',
+                size: 2097152, // 2MB
+                authorId: 1,
+                author: 'Admin',
+                uploadDate: '2024-03-14',
+                downloads: 28,
+                likes: 8,
+                tags: ['лого', 'дизайн', 'компания'],
+                extension: '.png',
+                thumbnail: '🖼️'
+            },
+            {
+                id: 3,
+                name: 'Фоновая музыка.mp3',
+                description: 'Лицензионная фоновая музыка для видео',
+                category: 'audio',
+                size: 8388608, // 8MB
+                authorId: 2,
+                author: 'Demo User',
+                uploadDate: '2024-03-13',
+                downloads: 15,
+                likes: 5,
+                tags: ['музыка', 'аудио', 'фон'],
+                extension: '.mp3',
+                thumbnail: '🎵'
+            },
+            {
+                id: 4,
+                name: 'Учебник JavaScript.pdf',
+                description: 'Полное руководство по программированию на JavaScript',
+                category: 'documents',
+                size: 10485760, // 10MB
+                authorId: 2,
+                author: 'Demo User',
+                uploadDate: '2024-03-12',
+                downloads: 56,
+                likes: 21,
+                tags: ['программирование', 'js', 'учебник'],
+                extension: '.pdf',
+                thumbnail: '📚'
+            },
+            {
+                id: 5,
+                name: 'Архив с исходниками.zip',
+                description: 'Исходные коды проекта веб-приложения',
+                category: 'archives',
+                size: 15728640, // 15MB
+                authorId: 1,
+                author: 'Admin',
+                uploadDate: '2024-03-11',
+                downloads: 33,
+                likes: 12,
+                tags: ['код', 'архив', 'проект'],
+                extension: '.zip',
+                thumbnail: '📦'
             }
-            element.textContent = current;
-        }, 20);
+        ];
+
+        this.users = demoUsers;
+        this.files = demoFiles;
+        this.saveData();
     }
-    
-    function renderFiles(filteredFiles = null) {
-        let filesToRender = filteredFiles || files;
+
+    saveData() {
+        localStorage.setItem('currentUser', JSON.stringify(this.currentUser));
+        localStorage.setItem('files', JSON.stringify(this.files));
+        localStorage.setItem('users', JSON.stringify(this.users));
+        localStorage.setItem('settings', JSON.stringify(this.settings));
+    }
+
+    updateUI() {
+        const userMenu = this.elements.userMenu;
         
-        // Применяем фильтр
-        filesToRender = applyFilter(filesToRender, currentFilter);
-        
-        // Применяем сортировку
-        filesToRender = applySort(filesToRender, currentSort);
-        
-        elements.filesContainer.innerHTML = '';
-        
-        if (filesToRender.length === 0) {
-            elements.filesContainer.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-folder-open"></i>
-                    <h3>Файлы не найдены</h3>
-                    <p>Попробуйте изменить параметры поиска или фильтрации</p>
-                    <button class="btn btn-primary" id="emptyUploadBtn">
-                        <i class="fas fa-cloud-upload-alt"></i> Загрузить первый файл
-                    </button>
+        if (this.currentUser) {
+            // Показать профиль пользователя
+            userMenu.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 12px; cursor: pointer;" id="profileDropdown">
+                    <div class="profile-avatar" style="width: 40px; height: 40px; font-size: 16px;">${this.currentUser.avatar}</div>
+                    <div>
+                        <div style="font-weight: 600;">${this.currentUser.username}</div>
+                        <div style="font-size: 12px; color: var(--text-secondary);">${this.currentUser.role || 'user'}</div>
+                    </div>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="dropdown-menu" style="display: none; position: absolute; top: 60px; right: 0; background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 10px; min-width: 200px; box-shadow: 0 10px 30px var(--shadow); z-index: 1000;">
+                    <a href="#" class="dropdown-item" data-action="profile" style="display: flex; align-items: center; gap: 10px; padding: 12px; color: var(--text-primary); text-decoration: none; border-radius: 8px; transition: background 0.3s;">
+                        <i class="fas fa-user"></i>
+                        <span>Профиль</span>
+                    </a>
+                    <a href="#" class="dropdown-item" data-action="settings" style="display: flex; align-items: center; gap: 10px; padding: 12px; color: var(--text-primary); text-decoration: none; border-radius: 8px; transition: background 0.3s;">
+                        <i class="fas fa-cog"></i>
+                        <span>Настройки</span>
+                    </a>
+                    <div style="height: 1px; background: var(--border); margin: 8px 0;"></div>
+                    <a href="#" class="dropdown-item" data-action="logout" style="display: flex; align-items: center; gap: 10px; padding: 12px; color: var(--danger); text-decoration: none; border-radius: 8px; transition: background 0.3s;">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Выйти</span>
+                    </a>
                 </div>
             `;
-            
-            document.getElementById('emptyUploadBtn')?.addEventListener('click', () => {
-                if (!currentUser) {
-                    showNotification('Для загрузки файлов необходимо войти в систему', 'error');
-                    openModal('login');
-                } else {
-                    openModal('upload');
-                }
-            });
-            
-            return;
-        }
-        
-        filesToRender.forEach(file => {
-            const fileCard = createFileCard(file);
-            elements.filesContainer.appendChild(fileCard);
-        });
-        
-        // Применяем режим просмотра
-        elements.filesContainer.className = `files-grid ${viewMode}-view`;
-    }
-    
-    function applyFilter(filesList, filter) {
-        switch(filter) {
-            case 'popular':
-                return filesList.filter(file => file.downloads >= 10);
-            case 'recent':
-                const weekAgo = new Date();
-                weekAgo.setDate(weekAgo.getDate() - 7);
-                return filesList.filter(file => new Date(file.uploadedAt) > weekAgo);
-            case 'myfiles':
-                if (!currentUser) return [];
-                return filesList.filter(file => file.authorId === currentUser.id);
-            default:
-                return filesList;
+        } else {
+            // Показать кнопки входа/регистрации
+            userMenu.innerHTML = `
+                <button class="btn btn-secondary" id="showLoginBtn">
+                    <i class="fas fa-sign-in-alt"></i>
+                    <span>Войти</span>
+                </button>
+                <button class="btn btn-primary" id="showRegisterBtn" style="display: none;">
+                    <i class="fas fa-user-plus"></i>
+                    <span>Регистрация</span>
+                </button>
+            `;
         }
     }
-    
-    function applySort(filesList, sort) {
-        return [...filesList].sort((a, b) => {
-            switch(sort) {
-                case 'newest':
-                    return new Date(b.uploadedAt) - new Date(a.uploadedAt);
-                case 'oldest':
-                    return new Date(a.uploadedAt) - new Date(b.uploadedAt);
-                case 'downloads':
-                    return (b.downloads || 0) - (a.downloads || 0);
-                case 'likes':
-                    return (b.likes?.length || 0) - (a.likes?.length || 0);
-                case 'name':
-                    return a.name.localeCompare(b.name);
-                default:
-                    return 0;
-            }
-        });
+
+    updateStats() {
+        // Обновляем статистику на дашборде
+        document.getElementById('totalUsers').textContent = this.users.length;
+        document.getElementById('totalFiles').textContent = this.files.length;
+        
+        const totalDownloads = this.files.reduce((sum, file) => sum + (file.downloads || 0), 0);
+        document.getElementById('totalDownloads').textContent = totalDownloads;
+        
+        const totalStorage = this.files.reduce((sum, file) => sum + (file.size || 0), 0);
+        document.getElementById('storageUsed').textContent = (totalStorage / (1024*1024*1024)).toFixed(1) + ' GB';
     }
-    
-    function createFileCard(file) {
-        const card = document.createElement('div');
-        card.className = 'file-card';
-        card.dataset.id = file.id;
+
+    loadFiles() {
+        // Загрузка недавних файлов
+        this.loadRecentFiles();
         
-        let iconClass = 'fas fa-file';
-        let fileType = getFileType(file.name);
+        // Загрузка всех файлов
+        this.loadAllFiles();
         
-        switch(fileType) {
-            case 'pdf': iconClass = 'fas fa-file-pdf'; break;
-            case 'image': iconClass = 'fas fa-file-image'; break;
-            case 'audio': iconClass = 'fas fa-file-audio'; break;
-            case 'video': iconClass = 'fas fa-file-video'; break;
-            case 'archive': iconClass = 'fas fa-file-archive'; break;
-            case 'code': iconClass = 'fas fa-file-code'; break;
-            case 'word': iconClass = 'fas fa-file-word'; break;
-            case 'excel': iconClass = 'fas fa-file-excel'; break;
-            case 'powerpoint': iconClass = 'fas fa-file-powerpoint'; break;
+        // Загрузка файлов пользователя
+        if (this.currentUser) {
+            this.loadUserFiles();
         }
+    }
+
+    loadRecentFiles() {
+        const grid = this.elements.recentFilesGrid;
+        const recentFiles = [...this.files]
+            .sort((a, b) => new Date(b.uploadDate) - new Date(a.uploadDate))
+            .slice(0, 6);
+
+        grid.innerHTML = recentFiles.map(file => this.createFileCard(file)).join('');
+    }
+
+    loadAllFiles() {
+        const grid = this.elements.allFilesGrid;
+        grid.innerHTML = this.files.map(file => this.createFileCard(file)).join('');
+    }
+
+    loadUserFiles() {
+        const grid = this.elements.myFilesGrid;
+        const userFiles = this.files.filter(file => file.authorId === this.currentUser.id);
+        grid.innerHTML = userFiles.map(file => this.createFileCard(file)).join('');
+    }
+
+    createFileCard(file) {
+        const fileSize = this.formatFileSize(file.size);
+        const uploadDate = new Date(file.uploadDate).toLocaleDateString('ru-RU');
         
-        const isLiked = currentUser && file.likes && file.likes.includes(currentUser.id);
-        const tags = file.tags || [];
-        
-        card.innerHTML = `
-            <div class="file-icon">
-                <i class="${iconClass}"></i>
-            </div>
-            <div class="file-info">
-                <h3>${file.name}</h3>
-                <p class="file-description">${file.description || 'Без описания'}</p>
-                <div class="file-meta">
-                    <span><i class="fas fa-weight-hanging"></i> ${formatFileSize(file.size)}</span>
-                    <span><i class="fas fa-user"></i> ${file.author}</span>
-                    <span><i class="far fa-calendar"></i> ${new Date(file.uploadedAt).toLocaleDateString('ru-RU')}</span>
-                    <span><i class="fas fa-folder"></i> ${getCategoryName(file.category)}</span>
+        return `
+            <div class="file-card" data-file-id="${file.id}">
+                <div class="file-header">
+                    <div class="file-icon">
+                        ${file.thumbnail || '📄'}
+                    </div>
+                    <div>
+                        <div class="file-name">${file.name}</div>
+                        <div class="file-size">${fileSize} • ${uploadDate}</div>
+                    </div>
                 </div>
-                ${tags.length > 0 ? `
-                <div class="file-tags">
-                    ${tags.map(tag => `<span class="tag">${tag.trim()}</span>`).join('')}
+                <div style="margin-bottom: 15px; color: var(--text-secondary); font-size: 14px;">
+                    ${file.description || 'Без описания'}
                 </div>
-                ` : ''}
-            </div>
-            <div class="file-actions">
-                <button class="download-btn" data-file-id="${file.id}">
-                    <i class="fas fa-download"></i> Скачать (${file.downloads || 0})
-                </button>
-                <button class="like-btn ${isLiked ? 'liked' : ''}" data-file-id="${file.id}">
-                    <i class="fas fa-heart"></i>
-                    <span class="like-count">${file.likes ? file.likes.length : 0}</span>
-                </button>
-                ${currentUser && file.authorId === currentUser.id ? `
-                <button class="delete-btn" data-file-id="${file.id}">
-                    <i class="fas fa-trash"></i>
-                </button>
-                ` : ''}
+                <div style="display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap;">
+                    ${file.tags?.map(tag => `<span style="background: var(--border); padding: 4px 12px; border-radius: 20px; font-size: 12px;">${tag}</span>`).join('') || ''}
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; gap: 20px;">
+                        <span style="color: var(--text-secondary);">
+                            <i class="fas fa-download"></i> ${file.downloads || 0}
+                        </span>
+                        <span style="color: var(--text-secondary);">
+                            <i class="fas fa-heart"></i> ${file.likes || 0}
+                        </span>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="download-btn" data-file-id="${file.id}" style="background: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 14px;">
+                            <i class="fas fa-download"></i> Скачать
+                        </button>
+                        ${this.currentUser && this.currentUser.id === file.authorId ? `
+                            <button class="delete-btn" data-file-id="${file.id}" style="background: var(--danger); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 14px;">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
             </div>
         `;
-        
-        return card;
     }
-    
-    function getCategoryName(category) {
-        const categoryNames = {
-            'documents': 'Документы',
-            'images': 'Изображения',
-            'audio': 'Аудио',
-            'video': 'Видео',
-            'archives': 'Архивы',
-            'software': 'Программы',
-            'other': 'Другое'
-        };
-        return categoryNames[category] || 'Другое';
-    }
-    
-    function getFileType(filename) {
-        const ext = filename.split('.').pop().toLowerCase();
-        const imageExts = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'];
-        const audioExts = ['mp3', 'wav', 'ogg', 'flac', 'aac'];
-        const videoExts = ['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv'];
-        const archiveExts = ['zip', 'rar', '7z', 'tar', 'gz'];
-        const codeExts = ['js', 'html', 'css', 'py', 'java', 'cpp', 'c', 'php'];
-        
-        if (imageExts.includes(ext)) return 'image';
-        if (audioExts.includes(ext)) return 'audio';
-        if (videoExts.includes(ext)) return 'video';
-        if (archiveExts.includes(ext)) return 'archive';
-        if (codeExts.includes(ext)) return 'code';
-        if (ext === 'pdf') return 'pdf';
-        if (ext === 'doc' || ext === 'docx') return 'word';
-        if (ext === 'xls' || ext === 'xlsx') return 'excel';
-        if (ext === 'ppt' || ext === 'pptx') return 'powerpoint';
-        return 'other';
-    }
-    
-    function formatFileSize(bytes) {
+
+    formatFileSize(bytes) {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
         const sizes = ['Bytes', 'KB', 'MB', 'GB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
-    
-    function downloadFile(fileId) {
-        const file = files.find(f => f.id === fileId);
-        if (!file) {
-            showNotification('Файл не найден', 'error');
-            return;
-        }
-        
-        if (!currentUser) {
-            showNotification('Для скачивания файлов необходимо войти в систему', 'error');
-            openModal('login');
-            return;
-        }
-        
-        const downloadBtn = document.querySelector(`.download-btn[data-file-id="${fileId}"]`);
-        if (downloadBtn) {
-            downloadBtn.classList.add('downloading');
-            downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Скачивание...';
-            downloadBtn.disabled = true;
-        }
-        
-        setTimeout(() => {
-            let blobContent;
-            let mimeType = 'application/octet-stream';
-            let filename = file.name;
-            
-            switch(getFileType(file.name)) {
-                case 'pdf':
-                    mimeType = 'application/pdf';
-                    blobContent = `%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n2 0 obj\n<<\n/Type /Pages\n/Kids [3 0 R]\n/Count 1\n>>\nendobj\n3 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/MediaBox [0 0 612 792]\n/Contents 4 0 R\n>>\nendobj\n4 0 obj\n<<\n/Length 44\n>>\nstream\nBT\n/F1 12 Tf\n72 720 Td\n(FileShare - ${file.name}) Tj\nET\nendstream\nendobj\nxref\n0 5\n0000000000 65535 f\n0000000010 00000 n\n0000000053 00000 n\n0000000102 00000 n\n0000000172 00000 n\ntrailer\n<<\n/Size 5\n/Root 1 0 R\n>>\nstartxref\n235\n%%EOF`;
-                    break;
-                case 'image':
-                    mimeType = 'image/png';
-                    const canvas = document.createElement('canvas');
-                    canvas.width = 400;
-                    canvas.height = 300;
-                    const ctx = canvas.getContext('2d');
-                    ctx.fillStyle = '#4361ee';
-                    ctx.fillRect(0, 0, 400, 300);
-                    ctx.fillStyle = 'white';
-                    ctx.font = '20px Arial';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('FileShare', 200, 120);
-                    ctx.fillText(file.name, 200, 160);
-                    ctx.fillText('Создано с помощью FileShare', 200, 200);
-                    blobContent = canvas.toDataURL('image/png').split(',')[1];
-                    filename = file.name.endsWith('.png') ? file.name : file.name + '.png';
-                    break;
-                case 'text':
-                default:
-                    mimeType = 'text/plain';
-                    blobContent = `FileShare - ${file.name}\n\nОписание: ${file.description || 'Нет описания'}\nАвтор: ${file.author}\nДата загрузки: ${new Date(file.uploadedAt).toLocaleString('ru-RU')}\nРазмер: ${formatFileSize(file.size)}\n\nСпасибо за использование FileShare!`;
-                    filename = file.name.endsWith('.txt') ? file.name : file.name + '.txt';
-                    break;
-            }
-            
-            let blob;
-            if (mimeType === 'image/png') {
-                const byteCharacters = atob(blobContent);
-                const byteNumbers = new Array(byteCharacters.length);
-                for (let i = 0; i < byteCharacters.length; i++) {
-                    byteNumbers[i] = byteCharacters.charCodeAt(i);
-                }
-                const byteArray = new Uint8Array(byteNumbers);
-                blob = new Blob([byteArray], { type: mimeType });
-            } else {
-                blob = new Blob([blobContent], { type: mimeType });
-            }
-            
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            file.downloads = (file.downloads || 0) + 1;
-            
-            if (currentUser) {
-                const userIndex = users.findIndex(u => u.id === currentUser.id);
-                if (userIndex !== -1) {
-                    users[userIndex].downloads = (users[userIndex].downloads || 0) + 1;
-                    currentUser.downloads = users[userIndex].downloads;
-                }
-                
-                // Сохраняем информацию о скачивании для статистики
-                if (!file.downloadHistory) file.downloadHistory = [];
-                file.downloadHistory.push({
-                    userId: currentUser.id,
-                    username: currentUser.username,
-                    date: new Date().toISOString()
-                });
-            }
-            
-            saveData();
-            updateStats();
-            renderFiles();
-            
-            if (downloadBtn) {
-                setTimeout(() => {
-                    downloadBtn.classList.remove('downloading');
-                    downloadBtn.innerHTML = `<i class="fas fa-download"></i> Скачать (${file.downloads})`;
-                    downloadBtn.disabled = false;
-                }, 500);
-            }
-            
-            if (userSettings.notifyDownloads) {
-                showNotification(`Файл "${file.name}" успешно скачан!`, 'success');
-            }
-            
-        }, 1500);
-    }
-    
-    function toggleLike(fileId) {
-        if (!currentUser) {
-            showNotification('Для оценки файлов необходимо войти в систему', 'error');
-            openModal('login');
-            return;
-        }
-        
-        const file = files.find(f => f.id === fileId);
-        if (!file) return;
-        
-        if (!file.likes) file.likes = [];
-        
-        const likeIndex = file.likes.indexOf(currentUser.id);
-        const isLiked = likeIndex !== -1;
-        
-        if (isLiked) {
-            file.likes.splice(likeIndex, 1);
-        } else {
-            file.likes.push(currentUser.id);
-        }
-        
-        saveData();
-        
-        const likeBtn = document.querySelector(`.like-btn[data-file-id="${fileId}"]`);
-        const likeCount = likeBtn.querySelector('.like-count');
-        
-        if (isLiked) {
-            likeBtn.classList.remove('liked');
-        } else {
-            likeBtn.classList.add('liked');
-            likeBtn.style.transform = 'scale(1.2)';
-            setTimeout(() => {
-                likeBtn.style.transform = 'scale(1)';
-            }, 300);
-            
-            if (userSettings.notifyLikes && file.authorId !== currentUser.id) {
-                showNotification(`Вы поставили лайк файлу "${file.name}"`, 'success');
-            }
-        }
-        
-        likeCount.textContent = file.likes.length;
-        
-        if (currentUser) {
-            const userIndex = users.findIndex(u => u.id === currentUser.id);
-            if (userIndex !== -1) {
-                users[userIndex].likes = (users[userIndex].likes || 0) + (isLiked ? -1 : 1);
-                currentUser.likes = users[userIndex].likes;
-            }
-        }
-    }
-    
-    function deleteFile(fileId) {
-        if (!currentUser) return;
-        
-        const file = files.find(f => f.id === fileId);
-        if (!file || file.authorId !== currentUser.id) {
-            showNotification('Вы не можете удалить этот файл', 'error');
-            return;
-        }
-        
-        if (confirm(`Вы уверены, что хотите удалить файл "${file.name}"?`)) {
-            files = files.filter(f => f.id !== fileId);
-            
-            const userIndex = users.findIndex(u => u.id === currentUser.id);
-            if (userIndex !== -1) {
-                users[userIndex].uploads = Math.max(0, (users[userIndex].uploads || 0) - 1);
-                currentUser.uploads = users[userIndex].uploads;
-            }
-            
-            saveData();
-            updateStats();
-            updateCategoryCounts();
-            renderFiles();
-            
-            showNotification(`Файл "${file.name}" удален`, 'success');
-        }
-    }
-    
-    function uploadFile(fileData) {
-        if (!currentUser) return;
-        
-        const newFile = {
-            id: Date.now(),
-            name: fileData.name,
-            description: fileData.description,
-            category: fileData.category,
-            size: fileData.size,
-            author: currentUser.username,
-            authorId: currentUser.id,
-            uploadedAt: new Date().toISOString(),
-            downloads: 0,
-            likes: [],
-            tags: fileData.tags || [],
-            downloadHistory: []
-        };
-        
-        files.unshift(newFile);
-        
-        const userIndex = users.findIndex(u => u.id === currentUser.id);
-        if (userIndex !== -1) {
-            users[userIndex].uploads = (users[userIndex].uploads || 0) + 1;
-            currentUser.uploads = users[userIndex].uploads;
-        }
-        
-        saveData();
-        updateStats();
-        updateCategoryCounts();
-        renderFiles();
-        
-        showNotification(`Файл "${fileData.name}" успешно загружен!`, 'success');
-    }
-    
-    function loadProfileData() {
-        if (!currentUser) return;
-        
-        const userData = users.find(u => u.id === currentUser.id);
-        if (!userData) return;
-        
-        // Обновляем данные в модальном окне профиля
-        document.getElementById('profileUsername').textContent = userData.username;
-        document.getElementById('profileEmail').textContent = userData.email;
-        document.getElementById('profileBio').textContent = userData.bio || 'Описание профиля...';
-        document.getElementById('statUploads').textContent = userData.uploads || 0;
-        document.getElementById('statDownloads').textContent = userData.downloads || 0;
-        document.getElementById('statLikes').textContent = userData.likes || 0;
-        
-        // Обновляем аватар
-        const profileAvatar = document.getElementById('profileAvatar');
-        profileAvatar.textContent = generateAvatar(userData.username);
-    }
-    
-    function loadStatsData() {
-        if (!currentUser) return;
-        
-        const myFiles = files.filter(f => f.authorId === currentUser.id);
-        const totalDownloads = myFiles.reduce((sum, file) => sum + (file.downloads || 0), 0);
-        const avgDailyDownloads = myFiles.length > 0 ? Math.round(totalDownloads / 30) : 0;
-        
-        let popularFile = 'Нет данных';
-        if (myFiles.length > 0) {
-            const mostPopular = myFiles.reduce((max, file) => 
-                file.downloads > max.downloads ? file : max, myFiles[0]);
-            popularFile = `${mostPopular.name} (${mostPopular.downloads} скачиваний)`;
-        }
-        
-        document.getElementById('totalDownloadsStat').textContent = totalDownloads;
-        document.getElementById('avgDailyDownloads').textContent = avgDailyDownloads;
-        document.getElementById('popularFile').textContent = popularFile;
-        
-        // Статистика по категориям
-        const categoryStats = {};
-        myFiles.forEach(file => {
-            categoryStats[file.category] = (categoryStats[file.category] || 0) + (file.downloads || 0);
-        });
-        
-        const categoryStatsElement = document.getElementById('categoryStats');
-        categoryStatsElement.innerHTML = '';
-        
-        for (const [category, count] of Object.entries(categoryStats)) {
-            const div = document.createElement('div');
-            div.className = 'category-stat-item';
-            div.innerHTML = `
-                <span>${getCategoryName(category)}:</span>
-                <span>${count}</span>
-            `;
-            categoryStatsElement.appendChild(div);
-        }
-        
-        // Последние скачивания
-        const downloadsList = document.getElementById('downloadsList');
-        downloadsList.innerHTML = '';
-        
-        const allDownloads = [];
-        myFiles.forEach(file => {
-            if (file.downloadHistory) {
-                file.downloadHistory.forEach(download => {
-                    allDownloads.push({
-                        ...download,
-                        fileName: file.name
-                    });
-                });
-            }
-        });
-        
-        allDownloads.sort((a, b) => new Date(b.date) - new Date(a.date));
-        
-        const recentDownloads = allDownloads.slice(0, 10);
-        
-        if (recentDownloads.length === 0) {
-            downloadsList.innerHTML = '<p class="empty-text">Нет данных о скачиваниях</p>';
-        } else {
-            recentDownloads.forEach(download => {
-                const div = document.createElement('div');
-                div.className = 'download-item';
-                div.innerHTML = `
-                    <div>
-                        <strong>${download.fileName}</strong>
-                        <div class="download-meta">
-                            <span>${download.username}</span>
-                            <span>${new Date(download.date).toLocaleDateString('ru-RU')}</span>
-                        </div>
-                    </div>
-                `;
-                downloadsList.appendChild(div);
-            });
-        }
-    }
-    
-    function saveData() {
-        localStorage.setItem('currentUser', JSON.stringify(currentUser));
-        localStorage.setItem('files', JSON.stringify(files));
-        localStorage.setItem('users', JSON.stringify(users));
-        localStorage.setItem('userSettings', JSON.stringify(userSettings));
-    }
-    
-    function showNotification(message, type = 'info') {
-        const notification = document.getElementById('notification');
+
+    showNotification(message, type = 'info') {
+        const notification = this.elements.notification;
         notification.textContent = message;
         notification.className = `notification show ${type}`;
         
@@ -730,617 +347,575 @@ document.addEventListener('DOMContentLoaded', function() {
             notification.classList.remove('show');
         }, 3000);
     }
-    
-    function openModal(modalName) {
-        const modal = modals[modalName];
-        if (modal) {
-            modal.classList.add('active');
-            document.body.style.overflow = 'hidden';
-            
-            if (modalName === 'profile') {
-                loadProfileData();
-            } else if (modalName === 'stats') {
-                loadStatsData();
-            }
-        }
-    }
-    
-    function closeModal(modal) {
-        modal.classList.remove('active');
-        document.body.style.overflow = 'auto';
-    }
-    
-    function setupEventListeners() {
+
+    setupEventListeners() {
+        // Меню бургер
+        this.elements.menuToggle.addEventListener('click', () => {
+            this.elements.sidebar.classList.toggle('active');
+            this.elements.mainContent.classList.toggle('with-sidebar');
+        });
+
         // Переключение темы
-        elements.themeToggle?.addEventListener('click', toggleTheme);
-        elements.footerThemeSelect?.addEventListener('change', function() {
-            userSettings.theme = this.value;
-            saveData();
-            loadTheme();
+        this.elements.themeToggle.addEventListener('click', () => {
+            this.settings.theme = this.settings.theme === 'dark' ? 'light' : 'dark';
+            this.saveData();
+            this.loadTheme();
         });
-        
-        // Настройки темы
-        document.getElementById('themeSelect')?.addEventListener('change', function() {
-            userSettings.theme = this.value;
-        });
-        
-        // Настройки шрифта
-        document.getElementById('fontSize')?.addEventListener('change', function() {
-            userSettings.fontSize = this.value;
-        });
-        
-        // Настройки уведомлений
-        document.getElementById('notifyDownloads')?.addEventListener('change', function() {
-            userSettings.notifyDownloads = this.checked;
-        });
-        
-        document.getElementById('notifyLikes')?.addEventListener('change', function() {
-            userSettings.notifyLikes = this.checked;
-        });
-        
-        // Сохранение настроек
-        document.getElementById('saveSettingsBtn')?.addEventListener('click', function() {
-            saveData();
-            loadSettings();
-            loadTheme();
-            showNotification('Настройки сохранены', 'success');
-            closeModal(modals.settings);
-        });
-        
-        // Переключение вью
-        document.querySelectorAll('.view-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                viewMode = this.dataset.view;
-                elements.filesContainer.className = `files-grid ${viewMode}-view`;
-            });
-        });
-        
-        // Сортировка
-        elements.sortSelect?.addEventListener('change', function() {
-            currentSort = this.value;
-            renderFiles();
-        });
-        
-        // Фильтры
-        document.querySelectorAll('.btn-filter').forEach(btn => {
-            btn.addEventListener('click', function() {
-                document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                currentFilter = this.dataset.filter;
-                renderFiles();
-            });
-        });
-        
-        // Категории
-        document.querySelectorAll('.category-card').forEach(card => {
-            card.addEventListener('click', function() {
-                const category = this.dataset.category;
-                const searchInput = document.getElementById('searchInput');
-                searchInput.value = '';
-                searchInput.focus();
-                
-                // Фильтруем по категории
-                const filteredFiles = files.filter(f => f.category === category);
-                renderFiles(filteredFiles);
-                
-                document.querySelectorAll('.category-card').forEach(c => {
-                    c.style.borderColor = '';
-                });
-                this.style.borderColor = '#4361ee';
-            });
-        });
-        
+
         // Поиск
-        elements.searchBtn?.addEventListener('click', performSearch);
-        elements.searchInput?.addEventListener('keyup', function(e) {
-            if (e.key === 'Enter') {
-                performSearch();
+        this.elements.searchInput.addEventListener('input', (e) => {
+            this.searchFiles(e.target.value);
+        });
+
+        // Загрузка файлов
+        this.elements.uploadBtn.addEventListener('click', () => {
+            if (!this.currentUser) {
+                this.showLoginModal();
+                return;
             }
+            this.showUploadModal();
         });
-        
-        // Кнопка обновить
-        elements.refreshBtn?.addEventListener('click', function() {
-            this.classList.add('refreshing');
-            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Обновление...';
-            
-            setTimeout(() => {
-                renderFiles();
-                updateStats();
-                updateCategoryCounts();
-                this.classList.remove('refreshing');
-                this.innerHTML = '<i class="fas fa-sync-alt"></i> Обновить';
-                showNotification('Данные обновлены', 'success');
-            }, 1000);
-        });
-        
-        // Кнопки открытия модальных окон
-        elements.loginBtn.addEventListener('click', () => openModal('login'));
-        elements.registerBtn.addEventListener('click', () => openModal('register'));
-        elements.uploadBtn.addEventListener('click', () => {
-            if (!currentUser) {
-                showNotification('Для загрузки файлов необходимо войти в систему', 'error');
-                openModal('login');
-            } else {
-                openModal('upload');
-            }
-        });
-        elements.heroUploadBtn.addEventListener('click', () => {
-            if (!currentUser) {
-                showNotification('Для загрузки файлов необходимо войти в систему', 'error');
-                openModal('login');
-            } else {
-                openModal('upload');
-            }
-        });
-        elements.exploreBtn?.addEventListener('click', () => {
-            elements.searchInput.focus();
-        });
-        
-        // Профиль
-        document.getElementById('profileBtn')?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            document.querySelector('.dropdown-menu').classList.toggle('show');
-        });
-        
-        // Закрытие dropdown при клике вне его
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.profile-menu')) {
-                document.querySelectorAll('.dropdown-menu').forEach(menu => {
-                    menu.classList.remove('show');
-                });
-            }
-        });
-        
-        document.getElementById('viewProfileBtn')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            openModal('profile');
-            document.querySelector('.dropdown-menu').classList.remove('show');
-        });
-        
-        document.getElementById('myFilesBtn')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (currentUser) {
-                const myFiles = files.filter(f => f.authorId === currentUser.id);
-                renderFiles(myFiles);
-                showNotification(`Показаны ваши файлы (${myFiles.length})`, 'success');
-                document.querySelector('.dropdown-menu').classList.remove('show');
-            }
-        });
-        
-        document.getElementById('myStatsBtn')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (currentUser) {
-                openModal('stats');
-                document.querySelector('.dropdown-menu').classList.remove('show');
-            }
-        });
-        
-        document.getElementById('settingsBtn')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            openModal('settings');
-            document.querySelector('.dropdown-menu').classList.remove('show');
-        });
-        
-        document.getElementById('logoutBtn')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (confirm('Вы уверены, что хотите выйти?')) {
-                currentUser = null;
-                saveData();
-                updateUI();
-                showNotification('Вы вышли из системы', 'success');
-                document.querySelector('.dropdown-menu').classList.remove('show');
-            }
-        });
-        
-        // Редактирование профиля
-        document.getElementById('editProfileBtn')?.addEventListener('click', () => {
-            showNotification('Функция редактирования профиля в разработке', 'info');
-        });
-        
-        // Закрытие модальных окон
-        document.querySelectorAll('.close-modal').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const modal = this.closest('.modal');
-                closeModal(modal);
+
+        // Модальные окна
+        document.querySelectorAll('.close-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this.closeAllModals();
             });
         });
-        
-        // Клик вне модального окна
+
+        // Клик вне модальных окон
         window.addEventListener('click', (e) => {
             if (e.target.classList.contains('modal')) {
-                closeModal(e.target);
+                this.closeAllModals();
             }
         });
-        
+
+        // Быстрая загрузка
+        document.getElementById('quickUploadBtn')?.addEventListener('click', () => {
+            if (!this.currentUser) {
+                this.showLoginModal();
+                return;
+            }
+            this.showUploadModal();
+        });
+
+        // Навигация
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                const section = item.dataset.section;
+                const category = item.dataset.category;
+                
+                if (section) {
+                    this.showSection(section);
+                } else if (category) {
+                    this.filterByCategory(category);
+                }
+                
+                // Закрываем меню на мобильных
+                if (window.innerWidth <= 1200) {
+                    this.elements.sidebar.classList.remove('active');
+                    this.elements.mainContent.classList.remove('with-sidebar');
+                }
+            });
+        });
+
+        // Показ всех файлов
+        document.getElementById('viewAllBtn')?.addEventListener('click', () => {
+            this.showSection('files');
+        });
+
+        // Делегирование событий для файлов
+        document.addEventListener('click', (e) => {
+            // Скачивание файла
+            if (e.target.closest('.download-btn')) {
+                const fileId = parseInt(e.target.closest('.download-btn').dataset.fileId);
+                this.downloadFile(fileId);
+                return;
+            }
+
+            // Удаление файла
+            if (e.target.closest('.delete-btn')) {
+                const fileId = parseInt(e.target.closest('.delete-btn').dataset.fileId);
+                this.deleteFile(fileId);
+                return;
+            }
+
+            // Действия профиля
+            if (e.target.closest('.dropdown-item')) {
+                const action = e.target.closest('.dropdown-item').dataset.action;
+                if (action === 'logout') {
+                    this.logout();
+                } else if (action === 'profile') {
+                    this.showProfileModal();
+                } else if (action === 'settings') {
+                    this.showSettingsModal();
+                }
+                return;
+            }
+
+            // Профиль дропдаун
+            if (e.target.closest('#profileDropdown')) {
+                const dropdown = document.querySelector('.dropdown-menu');
+                dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+            }
+        });
+
+        // Drag and drop
+        const dropArea = document.getElementById('dropArea');
+        const fileInput = document.getElementById('fileInput');
+        const browseBtn = document.getElementById('browseBtn');
+
+        if (dropArea && browseBtn) {
+            browseBtn.addEventListener('click', () => fileInput.click());
+            
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    this.handleFileSelect(e.target.files[0]);
+                }
+            });
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }, false);
+            });
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, () => {
+                    dropArea.style.borderColor = 'var(--primary)';
+                    dropArea.style.background = 'rgba(99, 102, 241, 0.05)';
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, () => {
+                    dropArea.style.borderColor = '';
+                    dropArea.style.background = '';
+                }, false);
+            });
+
+            dropArea.addEventListener('drop', (e) => {
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    this.handleFileSelect(files[0]);
+                }
+            }, false);
+        }
+
+        // Форма входа
+        document.getElementById('loginForm')?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.login();
+        });
+
+        // Форма регистрации
+        document.getElementById('registerForm')?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.register();
+        });
+
+        // Форма загрузки
+        document.getElementById('uploadForm')?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.uploadFile();
+        });
+
         // Переключение между логином и регистрацией
         document.getElementById('showRegister')?.addEventListener('click', (e) => {
             e.preventDefault();
-            closeModal(modals.login);
-            openModal('register');
+            this.showRegisterModal();
         });
-        
+
         document.getElementById('showLogin')?.addEventListener('click', (e) => {
             e.preventDefault();
-            closeModal(modals.register);
-            openModal('login');
-        });
-        
-        // Форма входа
-        document.getElementById('loginForm')?.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const username = document.getElementById('loginUsername').value;
-            const password = document.getElementById('loginPassword').value;
-            
-            const user = users.find(u => 
-                (u.username === username || u.email === username) && 
-                u.password === password
-            );
-            
-            if (user) {
-                currentUser = {
-                    id: user.id,
-                    username: user.username,
-                    email: user.email,
-                    bio: user.bio,
-                    uploads: user.uploads || 0,
-                    downloads: user.downloads || 0,
-                    likes: user.likes || 0
-                };
-                
-                saveData();
-                updateUI();
-                showNotification(`Добро пожаловать, ${user.username}!`, 'success');
-                closeModal(modals.login);
-                this.reset();
-            } else {
-                showNotification('Неверные учетные данные', 'error');
-            }
-        });
-        
-        // Форма регистрации
-        document.getElementById('registerForm')?.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const username = document.getElementById('regUsername').value;
-            const email = document.getElementById('regEmail').value;
-            const password = document.getElementById('regPassword').value;
-            const confirmPassword = document.getElementById('regConfirmPassword').value;
-            
-            if (password !== confirmPassword) {
-                showNotification('Пароли не совпадают', 'error');
-                return;
-            }
-            
-            if (password.length < 6) {
-                showNotification('Пароль должен содержать минимум 6 символов', 'error');
-                return;
-            }
-            
-            if (username.length < 3) {
-                showNotification('Логин должен содержать минимум 3 символа', 'error');
-                return;
-            }
-            
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
-                showNotification('Введите корректный email', 'error');
-                return;
-            }
-            
-            const userExists = users.some(u => u.username === username || u.email === email);
-            if (userExists) {
-                showNotification('Пользователь с таким именем или email уже существует', 'error');
-                return;
-            }
-            
-            const newUser = {
-                id: Date.now(),
-                username,
-                email,
-                password,
-                bio: 'Новый пользователь FileShare',
-                uploads: 0,
-                downloads: 0,
-                likes: 0,
-                createdAt: new Date().toISOString()
-            };
-            
-            users.push(newUser);
-            currentUser = {
-                id: newUser.id,
-                username: newUser.username,
-                email: newUser.email,
-                bio: newUser.bio,
-                uploads: 0,
-                downloads: 0,
-                likes: 0
-            };
-            
-            saveData();
-            updateUI();
-            updateStats();
-            showNotification('Регистрация успешна! Добро пожаловать!', 'success');
-            closeModal(modals.register);
-            this.reset();
-        });
-        
-        // Форма загрузки файла
-        document.getElementById('uploadForm')?.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            if (!currentUser) {
-                showNotification('Для загрузки файлов необходимо войти в систему', 'error');
-                return;
-            }
-            
-            const fileName = document.getElementById('fileName').value;
-            const fileDescription = document.getElementById('fileDescription').value;
-            const fileCategory = document.getElementById('fileCategory').value;
-            const fileTags = document.getElementById('fileTags').value;
-            const fileInput = document.getElementById('fileInput');
-            
-            if (!fileName || !fileCategory || !fileInput.files[0]) {
-                showNotification('Заполните все обязательные поля', 'error');
-                return;
-            }
-            
-            const file = fileInput.files[0];
-            const maxSize = 100 * 1024 * 1024;
-            
-            if (file.size > maxSize) {
-                showNotification('Файл слишком большой. Максимальный размер: 100MB', 'error');
-                return;
-            }
-            
-            const progressFill = document.getElementById('progressFill');
-            const progressText = document.getElementById('progressText');
-            const uploadProgress = document.getElementById('uploadProgress');
-            const uploadSubmitBtn = document.getElementById('uploadSubmitBtn');
-            
-            uploadProgress.style.display = 'block';
-            uploadSubmitBtn.disabled = true;
-            
-            let progress = 0;
-            const progressInterval = setInterval(() => {
-                progress += Math.random() * 20;
-                if (progress >= 100) {
-                    progress = 100;
-                    clearInterval(progressInterval);
-                    
-                    const tags = fileTags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-                    
-                    uploadFile({
-                        name: fileName,
-                        description: fileDescription,
-                        category: fileCategory,
-                        size: file.size,
-                        tags: tags
-                    });
-                    
-                    this.reset();
-                    document.getElementById('fileInfo').textContent = '';
-                    uploadProgress.style.display = 'none';
-                    uploadSubmitBtn.disabled = false;
-                    closeModal(modals.upload);
-                    
-                    setTimeout(() => {
-                        progressFill.style.width = '0%';
-                        progressText.textContent = '0%';
-                    }, 500);
-                }
-                
-                progressFill.style.width = `${progress}%`;
-                progressText.textContent = `${Math.round(progress)}%`;
-            }, 100);
-        });
-        
-        // Drag and drop для загрузки файлов
-        const uploadArea = document.getElementById('uploadArea');
-        if (uploadArea) {
-            uploadArea.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                uploadArea.style.borderColor = '#4361ee';
-                uploadArea.style.backgroundColor = 'rgba(67, 97, 238, 0.1)';
-            });
-            
-            uploadArea.addEventListener('dragleave', () => {
-                uploadArea.style.borderColor = '';
-                uploadArea.style.backgroundColor = '';
-            });
-            
-            uploadArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                uploadArea.style.borderColor = '';
-                uploadArea.style.backgroundColor = '';
-                
-                const fileInput = document.getElementById('fileInput');
-                if (e.dataTransfer.files.length > 0) {
-                    fileInput.files = e.dataTransfer.files;
-                    const file = fileInput.files[0];
-                    document.getElementById('fileInfo').textContent = 
-                        `Выбран файл: ${file.name} (${formatFileSize(file.size)})`;
-                    
-                    const fileNameInput = document.getElementById('fileName');
-                    if (!fileNameInput.value) {
-                        fileNameInput.value = file.name.replace(/\.[^/.]+$/, "");
-                    }
-                }
-            });
-        }
-        
-        // Выбор файла через кнопку
-        document.getElementById('fileInput')?.addEventListener('change', function() {
-            if (this.files[0]) {
-                const file = this.files[0];
-                document.getElementById('fileInfo').textContent = 
-                    `Выбран файл: ${file.name} (${formatFileSize(file.size)})`;
-                
-                const fileNameInput = document.getElementById('fileName');
-                if (!fileNameInput.value) {
-                    fileNameInput.value = file.name.replace(/\.[^/.]+$/, "");
-                }
-            }
-        });
-        
-        // Кнопка "Показать еще"
-        elements.loadMoreBtn?.addEventListener('click', () => {
-            const btn = elements.loadMoreBtn;
-            btn.classList.add('loading');
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Загрузка...';
-            
-            setTimeout(() => {
-                // В реальном приложении здесь была бы загрузка с сервера
-                // Пока просто показываем уведомление
-                showNotification('Все файлы загружены', 'info');
-                btn.classList.remove('loading');
-                btn.innerHTML = '<i class="fas fa-plus"></i> Загрузить еще файлы';
-            }, 1000);
-        });
-        
-        // Обработка кликов на файлы (делегирование)
-        elements.filesContainer.addEventListener('click', function(e) {
-            const downloadBtn = e.target.closest('.download-btn');
-            if (downloadBtn) {
-                const fileId = parseInt(downloadBtn.dataset.fileId);
-                downloadFile(fileId);
-                return;
-            }
-            
-            const likeBtn = e.target.closest('.like-btn');
-            if (likeBtn) {
-                const fileId = parseInt(likeBtn.dataset.fileId);
-                toggleLike(fileId);
-                return;
-            }
-            
-            const deleteBtn = e.target.closest('.delete-btn');
-            if (deleteBtn) {
-                const fileId = parseInt(deleteBtn.dataset.fileId);
-                deleteFile(fileId);
-                return;
-            }
-            
-            const tag = e.target.closest('.tag');
-            if (tag) {
-                const tagText = tag.textContent;
-                const searchInput = document.getElementById('searchInput');
-                searchInput.value = tagText;
-                performSearch();
-            }
+            this.showLoginModal();
         });
     }
-    
-    function performSearch() {
-        const query = document.getElementById('searchInput').value.toLowerCase();
+
+    showSection(section) {
+        // Скрываем все секции
+        document.querySelectorAll('section').forEach(sec => {
+            sec.style.display = 'none';
+        });
+        
+        // Показываем нужную секцию
+        document.getElementById(section + 'Section')?.style.display = 'block';
+        
+        // Обновляем активный пункт меню
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        document.querySelector(`.nav-item[data-section="${section}"]`)?.classList.add('active');
+    }
+
+    filterByCategory(category) {
+        const filteredFiles = this.files.filter(file => file.category === category);
+        this.elements.allFilesGrid.innerHTML = filteredFiles.map(file => this.createFileCard(file)).join('');
+        this.showSection('files');
+    }
+
+    searchFiles(query) {
         if (!query.trim()) {
-            renderFiles();
+            this.loadAllFiles();
             return;
         }
-        
-        const filteredFiles = files.filter(file => 
-            file.name.toLowerCase().includes(query) ||
-            file.description.toLowerCase().includes(query) ||
-            file.author.toLowerCase().includes(query) ||
-            (file.tags && file.tags.some(tag => tag.toLowerCase().includes(query))) ||
-            file.category.toLowerCase().includes(query)
+
+        const searchTerm = query.toLowerCase();
+        const filteredFiles = this.files.filter(file => 
+            file.name.toLowerCase().includes(searchTerm) ||
+            file.description.toLowerCase().includes(searchTerm) ||
+            file.tags?.some(tag => tag.toLowerCase().includes(searchTerm)) ||
+            file.author.toLowerCase().includes(searchTerm)
         );
+
+        this.elements.allFilesGrid.innerHTML = filteredFiles.map(file => this.createFileCard(file)).join('');
+    }
+
+    async downloadFile(fileId) {
+        if (!this.currentUser) {
+            this.showLoginModal();
+            return;
+        }
+
+        const file = this.files.find(f => f.id === fileId);
+        if (!file) {
+            this.showNotification('Файл не найден', 'error');
+            return;
+        }
+
+        // Имитация скачивания
+        const downloadBtn = document.querySelector(`.download-btn[data-file-id="${fileId}"]`);
+        if (downloadBtn) {
+            downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Скачивание...';
+            downloadBtn.disabled = true;
+        }
+
+        // Имитация задержки скачивания
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Обновляем статистику
+        file.downloads = (file.downloads || 0) + 1;
         
-        renderFiles(filteredFiles);
-        
-        if (filteredFiles.length === 0) {
-            showNotification('По вашему запросу ничего не найдено', 'info');
-        } else {
-            showNotification(`Найдено файлов: ${filteredFiles.length}`, 'success');
+        if (this.currentUser) {
+            const user = this.users.find(u => u.id === this.currentUser.id);
+            if (user) {
+                user.downloads = (user.downloads || 0) + 1;
+            }
+        }
+
+        this.saveData();
+        this.updateStats();
+        this.loadFiles();
+
+        if (downloadBtn) {
+            downloadBtn.innerHTML = '<i class="fas fa-download"></i> Скачать';
+            downloadBtn.disabled = false;
+        }
+
+        this.showNotification(`Файл "${file.name}" скачан!`, 'success');
+    }
+
+    deleteFile(fileId) {
+        if (!this.currentUser) {
+            this.showLoginModal();
+            return;
+        }
+
+        const file = this.files.find(f => f.id === fileId);
+        if (!file) {
+            this.showNotification('Файл не найден', 'error');
+            return;
+        }
+
+        if (file.authorId !== this.currentUser.id) {
+            this.showNotification('Вы не можете удалить этот файл', 'error');
+            return;
+        }
+
+        if (confirm(`Удалить файл "${file.name}"?`)) {
+            this.files = this.files.filter(f => f.id !== fileId);
+            
+            if (this.currentUser) {
+                const user = this.users.find(u => u.id === this.currentUser.id);
+                if (user) {
+                    user.uploads = Math.max(0, (user.uploads || 0) - 1);
+                }
+            }
+
+            this.saveData();
+            this.updateStats();
+            this.loadFiles();
+            
+            this.showNotification('Файл удален', 'success');
         }
     }
-    
-    function toggleTheme() {
-        const isDark = document.body.classList.contains('dark-theme');
-        document.body.className = isDark ? 'light-theme' : 'dark-theme';
-        userSettings.theme = isDark ? 'light' : 'dark';
-        saveData();
-        updateThemeIcon();
-    }
-    
-    // Создаем несколько демо-файлов при первом запуске
-    if (files.length === 0) {
-        const demoFiles = [
-            {
-                id: 1,
-                name: 'Презентация проекта.pdf',
-                description: 'Подробная презентация нового IT-проекта с анализом рынка и финансовыми прогнозами',
-                category: 'documents',
-                size: 4500000,
-                author: 'Admin User',
-                authorId: 1,
-                uploadedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-                downloads: 42,
-                likes: [1],
-                tags: ['работа', 'презентация', 'проект', 'анализ'],
-                downloadHistory: [
-                    { userId: 1, username: 'Demo User', date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString() }
-                ]
-            },
-            {
-                id: 2,
-                name: 'Градиенты для дизайна.jpg',
-                description: 'Коллекция красивых градиентов для веб-дизайна и мобильных приложений',
-                category: 'images',
-                size: 2500000,
-                author: 'Admin User',
-                authorId: 1,
-                uploadedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-                downloads: 28,
-                likes: [1, 2],
-                tags: ['дизайн', 'градиент', 'фон', 'цвет'],
-                downloadHistory: []
-            },
-            {
-                id: 3,
-                name: 'Музыка для видео.mp3',
-                description: 'Фоновая музыка для видеороликов без авторских отчислений',
-                category: 'audio',
-                size: 8500000,
-                author: 'Admin User',
-                authorId: 1,
-                uploadedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-                downloads: 15,
-                likes: [],
-                tags: ['музыка', 'аудио', 'фон', 'видео'],
-                downloadHistory: []
-            },
-            {
-                id: 4,
-                name: 'Руководство по JavaScript.pdf',
-                description: 'Полное руководство по JavaScript с примерами и упражнениями',
-                category: 'documents',
-                size: 3200000,
-                author: 'Demo User',
-                authorId: 1,
-                uploadedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-                downloads: 56,
-                likes: [1, 2, 3],
-                tags: ['программирование', 'javascript', 'учебник', 'веб'],
-                downloadHistory: []
-            },
-            {
-                id: 5,
-                name: 'Иконки для сайта.zip',
-                description: 'Набор иконок в формате SVG для веб-разработки',
-                category: 'archives',
-                size: 1500000,
-                author: 'Demo User',
-                authorId: 1,
-                uploadedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-                downloads: 33,
-                likes: [1],
-                tags: ['иконки', 'svg', 'дизайн', 'веб'],
-                downloadHistory: []
-            }
-        ];
+
+    handleFileSelect(file) {
+        const fileInfo = document.getElementById('fileInfo');
+        const fileNameInput = document.getElementById('fileName');
         
-        files = demoFiles;
-        saveData();
+        fileInfo.innerHTML = `
+            <div style="background: var(--dark-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                    <i class="fas fa-file" style="color: var(--primary); font-size: 24px;"></i>
+                    <div>
+                        <div style="font-weight: 600;">${file.name}</div>
+                        <div style="color: var(--text-secondary); font-size: 12px;">${this.formatFileSize(file.size)}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        if (!fileNameInput.value) {
+            fileNameInput.value = file.name.replace(/\.[^/.]+$/, "");
+        }
     }
+
+    async uploadFile() {
+        if (!this.currentUser) {
+            this.showLoginModal();
+            return;
+        }
+
+        const fileName = document.getElementById('fileName').value;
+        const description = document.getElementById('fileDescription').value;
+        const category = document.getElementById('fileCategory').value;
+        const fileInput = document.getElementById('fileInput');
+
+        if (!fileName || !category || !fileInput.files[0]) {
+            this.showNotification('Заполните все обязательные поля', 'error');
+            return;
+        }
+
+        const file = fileInput.files[0];
+        const maxSize = 10 * 1024 * 1024 * 1024; // 10GB
+
+        if (file.size > maxSize) {
+            this.showNotification('Файл слишком большой. Максимальный размер: 10GB', 'error');
+            return;
+        }
+
+        // Имитация загрузки с прогресс-баром
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const uploadProgress = document.getElementById('uploadProgress');
+        const uploadSubmitBtn = document.getElementById('uploadSubmitBtn');
+
+        uploadProgress.style.display = 'block';
+        uploadSubmitBtn.disabled = true;
+        uploadSubmitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Загрузка...';
+
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += 2;
+            if (progress >= 100) {
+                progress = 100;
+                clearInterval(interval);
+
+                // Создаем новый файл
+                const newFile = {
+                    id: Date.now(),
+                    name: fileName,
+                    description: description,
+                    category: category,
+                    size: file.size,
+                    authorId: this.currentUser.id,
+                    author: this.currentUser.username,
+                    uploadDate: new Date().toISOString().split('T')[0],
+                    downloads: 0,
+                    likes: 0,
+                    tags: [],
+                    extension: '.' + file.name.split('.').pop(),
+                    thumbnail: this.getFileThumbnail(category)
+                };
+
+                this.files.unshift(newFile);
+
+                if (this.currentUser) {
+                    const user = this.users.find(u => u.id === this.currentUser.id);
+                    if (user) {
+                        user.uploads = (user.uploads || 0) + 1;
+                        user.usedStorage = (user.usedStorage || 0) + file.size;
+                    }
+                }
+
+                this.saveData();
+                this.updateStats();
+                this.loadFiles();
+
+                // Сброс формы
+                document.getElementById('uploadForm').reset();
+                document.getElementById('fileInfo').innerHTML = '';
+                uploadProgress.style.display = 'none';
+                uploadSubmitBtn.disabled = false;
+                uploadSubmitBtn.innerHTML = '<i class="fas fa-upload"></i> Начать загрузку';
+                progressBar.style.width = '0%';
+                progressText.textContent = '0%';
+
+                this.closeAllModals();
+                this.showNotification(`Файл "${fileName}" успешно загружен!`, 'success');
+            }
+
+            progressBar.style.width = progress + '%';
+            progressText.textContent = progress + '%';
+        }, 50);
+    }
+
+    getFileThumbnail(category) {
+        const thumbnails = {
+            'documents': '📄',
+            'images': '🖼️',
+            'audio': '🎵',
+            'video': '🎬',
+            'archives': '📦',
+            'other': '📎'
+        };
+        return thumbnails[category] || '📎';
+    }
+
+    login() {
+        const loginInput = document.getElementById('loginInput').value;
+        const password = document.getElementById('loginPassword').value;
+
+        const user = this.users.find(u => 
+            (u.email === loginInput || u.username === loginInput) && 
+            u.password === password
+        );
+
+        if (user) {
+            this.currentUser = {
+                id: user.id,
+                username: user.username,
+                email: user.email,
+                avatar: user.avatar,
+                bio: user.bio,
+                role: user.role
+            };
+
+            this.saveData();
+            this.updateUI();
+            this.loadUserFiles();
+            this.closeAllModals();
+            this.showNotification(`Добро пожаловать, ${user.username}!`, 'success');
+        } else {
+            this.showNotification('Неверные учетные данные', 'error');
+        }
+    }
+
+    register() {
+        const username = document.getElementById('regUsername').value;
+        const email = document.getElementById('regEmail').value;
+        const password = document.getElementById('regPassword').value;
+        const confirmPassword = document.getElementById('regConfirmPassword').value;
+
+        if (password !== confirmPassword) {
+            this.showNotification('Пароли не совпадают', 'error');
+            return;
+        }
+
+        if (password.length < 6) {
+            this.showNotification('Пароль должен содержать минимум 6 символов', 'error');
+            return;
+        }
+
+        if (username.length < 3) {
+            this.showNotification('Имя пользователя должно содержать минимум 3 символа', 'error');
+            return;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            this.showNotification('Введите корректный email', 'error');
+            return;
+        }
+
+        const userExists = this.users.some(u => u.email === email || u.username === username);
+        if (userExists) {
+            this.showNotification('Пользователь с такими данными уже существует', 'error');
+            return;
+        }
+
+        const newUser = {
+            id: Date.now(),
+            username: username,
+            email: email,
+            password: password,
+            avatar: username.substring(0, 2).toUpperCase(),
+            bio: 'Новый пользователь FileShare Pro',
+            role: 'user',
+            storage: 5368709120, // 5GB
+            usedStorage: 0,
+            uploads: 0,
+            downloads: 0,
+            likes: 0,
+            joinDate: new Date().toISOString().split('T')[0]
+        };
+
+        this.users.push(newUser);
+        this.currentUser = {
+            id: newUser.id,
+            username: newUser.username,
+            email: newUser.email,
+            avatar: newUser.avatar,
+            bio: newUser.bio,
+            role: newUser.role
+        };
+
+        this.saveData();
+        this.updateUI();
+        this.updateStats();
+        this.closeAllModals();
+        this.showNotification('Регистрация успешна! Добро пожаловать!', 'success');
+    }
+
+    logout() {
+        this.currentUser = null;
+        this.saveData();
+        this.updateUI();
+        this.showNotification('Вы вышли из системы', 'success');
+    }
+
+    showUploadModal() {
+        this.closeAllModals();
+        this.elements.uploadModal.classList.add('active');
+    }
+
+    showLoginModal() {
+        this.closeAllModals();
+        this.elements.loginModal.classList.add('active');
+    }
+
+    showRegisterModal() {
+        this.closeAllModals();
+        this.elements.registerModal.classList.add('active');
+    }
+
+    showProfileModal() {
+        if (!this.currentUser) return;
+        
+        document.getElementById('editUsername').value = this.currentUser.username;
+        document.getElementById('editEmail').value = this.currentUser.email;
+        document.getElementById('editBio').value = this.currentUser.bio;
+        
+        this.closeAllModals();
+        this.elements.profileModal.classList.add('active');
+    }
+
+    showSettingsModal() {
+        // Реализация окна настроек
+        this.showNotification('Настройки в разработке', 'info');
+    }
+
+    closeAllModals() {
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.classList.remove('active');
+        });
+    }
+}
+
+// Инициализация приложения
+document.addEventListener('DOMContentLoaded', () => {
+    window.fileShareApp = new FileSharePro();
 });
