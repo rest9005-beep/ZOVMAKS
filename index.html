@@ -3,493 +3,1165 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FileShare | Обмен файлами</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>FileShare Pro | Продвинутый обмен файлами</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📁</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&family=Inter:wght@400;500;600;700;800&family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        /* Базовые переменные */
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --primary-light: #818cf8;
+            --secondary: #ec4899;
+            --accent: #06b6d4;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark-bg: #0f172a;
+            --card-bg: #1e293b;
+            --sidebar-bg: #0f172a;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --border: #334155;
+            --shadow: rgba(0, 0, 0, 0.25);
+            --gradient: linear-gradient(135deg, #6366f1, #ec4899, #06b6d4);
+            --glass: rgba(30, 41, 59, 0.7);
+            --blur: blur(10px);
+        }
+
+        .light-theme {
+            --dark-bg: #f8fafc;
+            --card-bg: #ffffff;
+            --sidebar-bg: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border: #e2e8f0;
+            --shadow: rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Лоадер */
+        #loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--dark-bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.3s;
+        }
+
+        .loader-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid transparent;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        .loader-text {
+            font-size: 18px;
+            color: var(--text-secondary);
+        }
+
+        /* Шапка */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: var(--glass);
+            backdrop-filter: var(--blur);
+            border-bottom: 1px solid var(--border);
+            z-index: 1000;
+            padding: 15px 0;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 30px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--gradient);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+        }
+
+        .logo-text {
+            font-family: 'Poppins', sans-serif;
+            font-weight: 800;
+            font-size: 24px;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .search-container {
+            flex: 1;
+            max-width: 600px;
+            position: relative;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 14px 20px;
+            background: var(--card-bg);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 15px;
+            padding-left: 50px;
+            transition: all 0.3s;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* Боковое меню */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 70px;
+            width: 280px;
+            height: calc(100vh - 70px);
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--border);
+            padding: 30px 20px;
+            overflow-y: auto;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            z-index: 999;
+        }
+
+        .sidebar.active {
+            transform: translateX(0);
+        }
+
+        .sidebar-section {
+            margin-bottom: 40px;
+        }
+
+        .sidebar-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            border-radius: 10px;
+            color: var(--text-secondary);
+            text-decoration: none;
+            margin-bottom: 8px;
+            transition: all 0.3s;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Основной контент */
+        .main-content {
+            margin-left: 0;
+            margin-top: 70px;
+            padding: 30px;
+            transition: margin-left 0.3s;
+        }
+
+        .main-content.with-sidebar {
+            margin-left: 280px;
+        }
+
+        /* Герой секция */
+        .hero-section {
+            background: var(--gradient);
+            border-radius: 24px;
+            padding: 60px;
+            margin-bottom: 40px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 800px;
+        }
+
+        .hero-title {
+            font-family: 'Poppins', sans-serif;
+            font-size: 56px;
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        .hero-subtitle {
+            font-size: 20px;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 40px;
+            line-height: 1.6;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 16px 32px;
+            border-radius: 12px;
+            border: none;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: white;
+            color: var(--primary);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-lg {
+            padding: 20px 40px;
+            font-size: 18px;
+        }
+
+        .hero-stats {
+            display: flex;
+            gap: 30px;
+            margin-top: 60px;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            min-width: 200px;
+        }
+
+        .stat-number {
+            font-size: 40px;
+            font-weight: 800;
+            color: white;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+        }
+
+        /* Быстрые действия */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .quick-action-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 30px;
+            border: 1px solid var(--border);
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .quick-action-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+            box-shadow: 0 20px 40px var(--shadow);
+        }
+
+        .quick-action-icon {
+            width: 60px;
+            height: 60px;
+            background: var(--gradient);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            color: white;
+            font-size: 24px;
+        }
+
+        /* Файлы */
+        .files-section {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 40px;
+            border: 1px solid var(--border);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-family: 'Poppins', sans-serif;
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .files-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .file-card {
+            background: var(--dark-bg);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid var(--border);
+            transition: all 0.3s;
+        }
+
+        .file-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--primary);
+            box-shadow: 0 10px 30px var(--shadow);
+        }
+
+        .file-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .file-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--gradient);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+        }
+
+        .file-name {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .file-size {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* Модальные окна */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            padding: 20px;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            border-radius: 24px;
+            max-width: 500px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            border: 1px solid var(--border);
+            animation: modalSlide 0.3s ease;
+        }
+
+        @keyframes modalSlide {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            padding: 30px 30px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .modal-body {
+            padding: 30px;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 24px;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .close-btn:hover {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--danger);
+        }
+
+        /* Формы */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            background: var(--dark-bg);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 15px;
+            transition: all 0.3s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        .upload-area {
+            border: 3px dashed var(--border);
+            border-radius: 16px;
+            padding: 60px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        /* Профиль */
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            margin-bottom: 30px;
+        }
+
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: var(--gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 36px;
+            font-weight: 700;
+            border: 4px solid var(--primary);
+        }
+
+        .profile-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .profile-stat {
+            background: var(--dark-bg);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        /* Уведомления */
+        .notification {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid var(--primary);
+            box-shadow: 0 10px 30px var(--shadow);
+            transform: translateX(150%);
+            transition: transform 0.3s ease;
+            max-width: 350px;
+            z-index: 3000;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success { border-left-color: var(--success); }
+        .notification.error { border-left-color: var(--danger); }
+        .notification.warning { border-left-color: var(--warning); }
+
+        /* Адаптивность */
+        @media (max-width: 1200px) {
+            .main-content.with-sidebar {
+                margin-left: 0;
+            }
+            
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.active {
+                transform: translateX(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero-title {
+                font-size: 36px;
+            }
+            
+            .header-content {
+                flex-wrap: wrap;
+                gap: 15px;
+            }
+            
+            .search-container {
+                order: 3;
+                width: 100%;
+            }
+            
+            .hero-actions {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .files-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Меню бургер */
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 1200px) {
+            .menu-toggle {
+                display: block;
+            }
+        }
+
+        /* Анимации */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease;
+        }
+
+        /* Скроллбар */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--dark-bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-dark);
+        }
+    </style>
 </head>
 <body class="dark-theme">
-    <!-- Шапка сайта -->
+    <!-- Лоадер -->
+    <div id="loader">
+        <div class="loader-spinner"></div>
+        <div class="loader-text">Загрузка FileShare Pro...</div>
+    </div>
+
+    <!-- Шапка -->
     <header class="header">
         <div class="container">
             <div class="header-content">
-                <div class="logo">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                    <h1>File<span>Share</span></h1>
-                </div>
+                <button class="menu-toggle" id="menuToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
                 
-                <!-- Поиск -->
+                <a href="#" class="logo">
+                    <div class="logo-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <span class="logo-text">FileShare Pro</span>
+                </a>
+
                 <div class="search-container">
-                    <input type="text" id="searchInput" placeholder="Поиск файлов...">
-                    <button id="searchBtn"><i class="fas fa-search"></i></button>
+                    <i class="fas fa-search search-icon"></i>
+                    <input type="text" class="search-box" id="searchInput" placeholder="Поиск файлов, пользователей, тегов...">
                 </div>
-                
-                <!-- Кнопки пользователя -->
-                <div class="user-controls">
-                    <button class="btn btn-theme" id="themeToggle">
+
+                <div class="header-actions">
+                    <button class="btn btn-secondary" id="themeToggle">
                         <i class="fas fa-moon"></i>
                     </button>
-                    <button class="btn btn-login" id="loginBtn">
-                        <i class="fas fa-sign-in-alt"></i> Войти
-                    </button>
-                    <button class="btn btn-register" id="registerBtn">
-                        <i class="fas fa-user-plus"></i> Регистрация
-                    </button>
-                    <button class="btn btn-upload" id="uploadBtn">
-                        <i class="fas fa-cloud-upload-alt"></i> Загрузить
+                    
+                    <button class="btn btn-primary" id="uploadBtn">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <span>Загрузить</span>
                     </button>
                     
-                    <!-- Профиль -->
-                    <div class="user-profile" id="userProfile" style="display: none;">
-                        <div class="profile-menu">
-                            <button class="profile-btn" id="profileBtn">
-                                <div class="avatar" id="avatarContainer">U</div>
-                                <span id="userName">User</span>
-                                <i class="fas fa-chevron-down"></i>
-                            </button>
-                            <div class="dropdown-menu">
-                                <a href="#" class="dropdown-item" id="viewProfileBtn">
-                                    <i class="fas fa-user"></i> Профиль
-                                </a>
-                                <a href="#" class="dropdown-item" id="myFilesBtn">
-                                    <i class="fas fa-folder"></i> Мои файлы
-                                </a>
-                                <a href="#" class="dropdown-item" id="myStatsBtn">
-                                    <i class="fas fa-chart-bar"></i> Статистика
-                                </a>
-                                <a href="#" class="dropdown-item" id="settingsBtn">
-                                    <i class="fas fa-cog"></i> Настройки
-                                </a>
-                                <div class="dropdown-divider"></div>
-                                <a href="#" class="dropdown-item logout" id="logoutBtn">
-                                    <i class="fas fa-sign-out-alt"></i> Выйти
-                                </a>
-                            </div>
-                        </div>
+                    <div class="user-menu" id="userMenu">
+                        <!-- Заполняется через JS -->
                     </div>
                 </div>
             </div>
         </div>
     </header>
 
-    <!-- Модальные окна -->
-    <div class="modal" id="loginModal">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h2><i class="fas fa-sign-in-alt"></i> Вход в аккаунт</h2>
-            <form id="loginForm">
-                <div class="form-group">
-                    <input type="text" id="loginUsername" placeholder="Логин или Email" required>
-                </div>
-                <div class="form-group">
-                    <input type="password" id="loginPassword" placeholder="Пароль" required>
-                </div>
-                <button type="submit" class="btn btn-primary btn-block">Войти</button>
-            </form>
-            <p class="modal-footer-text">
-                Нет аккаунта? <a href="#" id="showRegister">Зарегистрироваться</a>
-            </p>
+    <!-- Боковое меню -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-section">
+            <div class="sidebar-title">Главное</div>
+            <a href="#" class="nav-item active" data-section="dashboard">
+                <i class="fas fa-home"></i>
+                <span>Панель управления</span>
+            </a>
+            <a href="#" class="nav-item" data-section="files">
+                <i class="fas fa-folder"></i>
+                <span>Все файлы</span>
+            </a>
+            <a href="#" class="nav-item" data-section="myfiles">
+                <i class="fas fa-file-alt"></i>
+                <span>Мои файлы</span>
+            </a>
+            <a href="#" class="nav-item" data-section="favorites">
+                <i class="fas fa-star"></i>
+                <span>Избранное</span>
+            </a>
         </div>
-    </div>
 
-    <div class="modal" id="registerModal">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h2><i class="fas fa-user-plus"></i> Регистрация</h2>
-            <form id="registerForm">
-                <div class="form-group">
-                    <input type="text" id="regUsername" placeholder="Логин" required>
-                </div>
-                <div class="form-group">
-                    <input type="email" id="regEmail" placeholder="Email" required>
-                </div>
-                <div class="form-group">
-                    <input type="password" id="regPassword" placeholder="Пароль (мин. 6 символов)" required>
-                </div>
-                <div class="form-group">
-                    <input type="password" id="regConfirmPassword" placeholder="Повторите пароль" required>
-                </div>
-                <button type="submit" class="btn btn-primary btn-block">Зарегистрироваться</button>
-            </form>
-            <p class="modal-footer-text">
-                Уже есть аккаунт? <a href="#" id="showLogin">Войти</a>
-            </p>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Категории</div>
+            <a href="#" class="nav-item" data-category="documents">
+                <i class="fas fa-file-pdf"></i>
+                <span>Документы</span>
+            </a>
+            <a href="#" class="nav-item" data-category="images">
+                <i class="fas fa-image"></i>
+                <span>Изображения</span>
+            </a>
+            <a href="#" class="nav-item" data-category="audio">
+                <i class="fas fa-music"></i>
+                <span>Аудио</span>
+            </a>
+            <a href="#" class="nav-item" data-category="video">
+                <i class="fas fa-video"></i>
+                <span>Видео</span>
+            </a>
+            <a href="#" class="nav-item" data-category="archives">
+                <i class="fas fa-file-archive"></i>
+                <span>Архивы</span>
+            </a>
         </div>
-    </div>
 
-    <div class="modal" id="uploadModal">
-        <div class="modal-content compact">
-            <span class="close-modal">&times;</span>
-            <h2><i class="fas fa-cloud-upload-alt"></i> Загрузить файл</h2>
-            <form id="uploadForm" enctype="multipart/form-data">
-                <div class="form-group">
-                    <input type="text" id="fileName" placeholder="Название файла" required>
-                </div>
-                <div class="form-group">
-                    <textarea id="fileDescription" placeholder="Описание файла" rows="2"></textarea>
-                </div>
-                <div class="form-group">
-                    <label for="fileCategory">Категория:</label>
-                    <select id="fileCategory" required>
-                        <option value="">Выберите категорию</option>
-                        <option value="documents">Документы</option>
-                        <option value="images">Изображения</option>
-                        <option value="audio">Аудио</option>
-                        <option value="video">Видео</option>
-                        <option value="archives">Архивы</option>
-                        <option value="software">Программы</option>
-                        <option value="other">Другое</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="fileTags">Теги (через запятую):</label>
-                    <input type="text" id="fileTags" placeholder="например: работа, проект, презентация">
-                </div>
-                <div class="form-group file-upload-area">
-                    <div class="upload-area" id="uploadArea">
-                        <i class="fas fa-cloud-upload-alt"></i>
-                        <p>Перетащите файл сюда или нажмите для выбора</p>
-                        <input type="file" id="fileInput" required>
-                        <label for="fileInput" class="file-label">Выбрать файл</label>
-                    </div>
-                    <div class="file-info" id="fileInfo"></div>
-                    <div class="upload-progress" id="uploadProgress">
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="progressFill"></div>
+        <div class="sidebar-section">
+            <div class="sidebar-title">Статистика</div>
+            <a href="#" class="nav-item" data-section="stats">
+                <i class="fas fa-chart-bar"></i>
+                <span>Аналитика</span>
+            </a>
+            <a href="#" class="nav-item" data-section="reports">
+                <i class="fas fa-chart-line"></i>
+                <span>Отчеты</span>
+            </a>
+            <a href="#" class="nav-item" data-section="activity">
+                <i class="fas fa-history"></i>
+                <span>Активность</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- Основной контент -->
+    <main class="main-content" id="mainContent">
+        <div class="container">
+            <!-- Дашборд -->
+            <section class="dashboard-section active" id="dashboardSection">
+                <div class="hero-section">
+                    <div class="hero-content">
+                        <h1 class="hero-title">Добро пожаловать в FileShare Pro</h1>
+                        <p class="hero-subtitle">Продвинутая платформа для обмена файлами с поддержкой облачных технологий, шифрованием и аналитикой</p>
+                        <div class="hero-actions">
+                            <button class="btn btn-primary btn-lg" id="quickUploadBtn">
+                                <i class="fas fa-bolt"></i>
+                                Быстрая загрузка
+                            </button>
+                            <button class="btn btn-secondary btn-lg" id="exploreFilesBtn">
+                                <i class="fas fa-compass"></i>
+                                Исследовать файлы
+                            </button>
+                            <button class="btn btn-secondary btn-lg" id="inviteFriendsBtn">
+                                <i class="fas fa-user-plus"></i>
+                                Пригласить друзей
+                            </button>
                         </div>
-                        <span class="progress-text" id="progressText">0%</span>
+                        <div class="hero-stats">
+                            <div class="stat-card">
+                                <span class="stat-number" id="totalUsers">0</span>
+                                <span class="stat-label">Активных пользователей</span>
+                            </div>
+                            <div class="stat-card">
+                                <span class="stat-number" id="totalFiles">0</span>
+                                <span class="stat-label">Файлов в системе</span>
+                            </div>
+                            <div class="stat-card">
+                                <span class="stat-number" id="totalDownloads">0</span>
+                                <span class="stat-label">Всего скачиваний</span>
+                            </div>
+                            <div class="stat-card">
+                                <span class="stat-number" id="storageUsed">0 GB</span>
+                                <span class="stat-label">Использовано памяти</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <button type="submit" class="btn btn-primary btn-block" id="uploadSubmitBtn">Загрузить файл</button>
-            </form>
+
+                <!-- Быстрые действия -->
+                <div class="quick-actions">
+                    <div class="quick-action-card" id="uploadAction">
+                        <div class="quick-action-icon">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                        </div>
+                        <h3>Загрузить файл</h3>
+                        <p>Загрузите файлы любого типа до 10GB</p>
+                    </div>
+                    <div class="quick-action-card" id="createFolder">
+                        <div class="quick-action-icon">
+                            <i class="fas fa-folder-plus"></i>
+                        </div>
+                        <h3>Создать папку</h3>
+                        <p>Организуйте файлы в структурированные папки</p>
+                    </div>
+                    <div class="quick-action-card" id="shareLink">
+                        <div class="quick-action-icon">
+                            <i class="fas fa-share-alt"></i>
+                        </div>
+                        <h3>Поделиться</h3>
+                        <p>Создайте публичные ссылки для обмена</p>
+                    </div>
+                    <div class="quick-action-card" id="settingsAction">
+                        <div class="quick-action-icon">
+                            <i class="fas fa-cog"></i>
+                        </div>
+                        <h3>Настройки</h3>
+                        <p>Настройте параметры аккаунта и безопасности</p>
+                    </div>
+                </div>
+
+                <!-- Недавние файлы -->
+                <div class="files-section">
+                    <div class="section-header">
+                        <h2 class="section-title">Недавние файлы</h2>
+                        <button class="btn btn-secondary" id="viewAllBtn">
+                            <i class="fas fa-eye"></i>
+                            Показать все
+                        </button>
+                    </div>
+                    <div class="files-grid" id="recentFilesGrid">
+                        <!-- Заполняется через JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- Все файлы -->
+            <section class="files-section" id="allFilesSection" style="display: none;">
+                <div class="section-header">
+                    <h2 class="section-title">Все файлы</h2>
+                    <div class="filters">
+                        <select class="form-input" id="sortSelect" style="width: auto;">
+                            <option value="newest">Сначала новые</option>
+                            <option value="popular">По популярности</option>
+                            <option value="size">По размеру</option>
+                            <option value="name">По имени</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="files-grid" id="allFilesGrid">
+                    <!-- Заполняется через JS -->
+                </div>
+            </section>
+
+            <!-- Профиль -->
+            <section class="files-section" id="profileSection" style="display: none;">
+                <div class="profile-header">
+                    <div class="profile-avatar" id="profileAvatar">U</div>
+                    <div>
+                        <h2 id="profileName">Пользователь</h2>
+                        <p id="profileEmail">email@example.com</p>
+                        <p id="profileBio">О себе...</p>
+                    </div>
+                </div>
+                
+                <div class="profile-stats">
+                    <div class="profile-stat">
+                        <span class="stat-value" id="profileUploads">0</span>
+                        <span>Загрузок</span>
+                    </div>
+                    <div class="profile-stat">
+                        <span class="stat-value" id="profileDownloads">0</span>
+                        <span>Скачиваний</span>
+                    </div>
+                    <div class="profile-stat">
+                        <span class="stat-value" id="profileLikes">0</span>
+                        <span>Лайков</span>
+                    </div>
+                </div>
+                
+                <div class="files-section">
+                    <h3 class="section-title">Мои файлы</h3>
+                    <div class="files-grid" id="myFilesGrid">
+                        <!-- Заполняется через JS -->
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Модальное окно загрузки -->
+    <div class="modal" id="uploadModal">
+        <div class="modal-content">
+            <button class="close-btn" id="closeUploadModal">&times;</button>
+            <div class="modal-header">
+                <h2><i class="fas fa-cloud-upload-alt"></i> Загрузить файл</h2>
+            </div>
+            <div class="modal-body">
+                <form id="uploadForm">
+                    <div class="form-group">
+                        <label class="form-label">Название файла</label>
+                        <input type="text" class="form-input" id="fileName" placeholder="Введите название" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Описание</label>
+                        <textarea class="form-input" id="fileDescription" placeholder="Опишите файл..." rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Категория</label>
+                        <select class="form-input" id="fileCategory" required>
+                            <option value="">Выберите категорию</option>
+                            <option value="documents">Документы</option>
+                            <option value="images">Изображения</option>
+                            <option value="audio">Аудио</option>
+                            <option value="video">Видео</option>
+                            <option value="archives">Архивы</option>
+                            <option value="other">Другое</option>
+                        </select>
+                    </div>
+                    
+                    <div class="upload-area" id="dropArea">
+                        <i class="fas fa-cloud-upload-alt" style="font-size: 48px; margin-bottom: 20px; color: var(--primary);"></i>
+                        <h3>Перетащите файлы сюда</h3>
+                        <p>или нажмите для выбора</p>
+                        <input type="file" id="fileInput" style="display: none;">
+                        <button type="button" class="btn btn-primary" style="margin-top: 20px;" id="browseBtn">
+                            <i class="fas fa-folder-open"></i> Выбрать файл
+                        </button>
+                    </div>
+                    
+                    <div id="fileInfo" style="margin-bottom: 20px;"></div>
+                    
+                    <div id="uploadProgress" style="display: none;">
+                        <div style="background: var(--border); height: 8px; border-radius: 4px; overflow: hidden;">
+                            <div id="progressBar" style="background: var(--primary); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 10px;">
+                            <span id="progressText">0%</span>
+                            <span id="speedInfo"></span>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 20px;" id="uploadSubmitBtn">
+                        <i class="fas fa-upload"></i> Начать загрузку
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 
     <!-- Модальное окно профиля -->
     <div class="modal" id="profileModal">
         <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h2><i class="fas fa-user"></i> Мой профиль</h2>
-            <div class="profile-header">
-                <div class="avatar-large" id="profileAvatar">U</div>
-                <div class="profile-info">
-                    <h3 id="profileUsername">User</h3>
-                    <p id="profileEmail">user@example.com</p>
-                    <p class="profile-bio" id="profileBio">Описание профиля...</p>
-                </div>
+            <button class="close-btn" id="closeProfileModal">&times;</button>
+            <div class="modal-header">
+                <h2><i class="fas fa-user-cog"></i> Настройки профиля</h2>
             </div>
-            
-            <div class="profile-stats">
-                <h3><i class="fas fa-chart-bar"></i> Статистика</h3>
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <i class="fas fa-cloud-upload-alt"></i>
-                        <div class="stat-info">
-                            <span class="stat-value" id="statUploads">0</span>
-                            <span class="stat-label">Загружено файлов</span>
-                        </div>
+            <div class="modal-body">
+                <form id="profileForm">
+                    <div class="form-group">
+                        <label class="form-label">Имя пользователя</label>
+                        <input type="text" class="form-input" id="editUsername" required>
                     </div>
-                    <div class="stat-card">
-                        <i class="fas fa-download"></i>
-                        <div class="stat-info">
-                            <span class="stat-value" id="statDownloads">0</span>
-                            <span class="stat-label">Скачано файлов</span>
-                        </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" id="editEmail" required>
                     </div>
-                    <div class="stat-card">
-                        <i class="fas fa-heart"></i>
-                        <div class="stat-info">
-                            <span class="stat-value" id="statLikes">0</span>
-                            <span class="stat-label">Лайков получено</span>
-                        </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">О себе</label>
+                        <textarea class="form-input" id="editBio" rows="3" placeholder="Расскажите о себе..."></textarea>
                     </div>
-                </div>
-            </div>
-            
-            <div class="profile-actions">
-                <button class="btn btn-secondary" id="editProfileBtn">
-                    <i class="fas fa-edit"></i> Редактировать профиль
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Модальное окно статистики -->
-    <div class="modal" id="statsModal">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h2><i class="fas fa-chart-pie"></i> Статистика скачиваний</h2>
-            
-            <div class="stats-content">
-                <div class="stats-overview">
-                    <div class="stat-overview-card">
-                        <h3>Общая статистика</h3>
-                        <div class="overview-item">
-                            <span>Всего скачиваний:</span>
-                            <strong id="totalDownloadsStat">0</strong>
-                        </div>
-                        <div class="overview-item">
-                            <span>Среднее в день:</span>
-                            <strong id="avgDailyDownloads">0</strong>
-                        </div>
-                        <div class="overview-item">
-                            <span>Популярный файл:</span>
-                            <span id="popularFile">Нет данных</span>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Цвет темы</label>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button type="button" class="theme-color" data-color="purple" style="background: #6366f1; width: 40px; height: 40px; border-radius: 8px; border: none; cursor: pointer;"></button>
+                            <button type="button" class="theme-color" data-color="blue" style="background: #3b82f6; width: 40px; height: 40px; border-radius: 8px; border: none; cursor: pointer;"></button>
+                            <button type="button" class="theme-color" data-color="green" style="background: #10b981; width: 40px; height: 40px; border-radius: 8px; border: none; cursor: pointer;"></button>
+                            <button type="button" class="theme-color" data-color="red" style="background: #ef4444; width: 40px; height: 40px; border-radius: 8px; border: none; cursor: pointer;"></button>
+                            <button type="button" class="theme-color" data-color="orange" style="background: #f59e0b; width: 40px; height: 40px; border-radius: 8px; border: none; cursor: pointer;"></button>
                         </div>
                     </div>
                     
-                    <div class="stat-overview-card">
-                        <h3>По категориям</h3>
-                        <div class="category-stats" id="categoryStats">
-                            <!-- Данные будут загружены через JS -->
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="recent-downloads">
-                    <h3>Последние скачивания</h3>
-                    <div class="downloads-list" id="downloadsList">
-                        <!-- Данные будут загружены через JS -->
-                    </div>
-                </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        <i class="fas fa-save"></i> Сохранить изменения
+                    </button>
+                </form>
             </div>
         </div>
     </div>
 
-    <!-- Модальное окно настроек -->
-    <div class="modal" id="settingsModal">
+    <!-- Модальное окно входа -->
+    <div class="modal" id="loginModal">
         <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h2><i class="fas fa-cog"></i> Настройки</h2>
-            
-            <div class="settings-section">
-                <h3><i class="fas fa-palette"></i> Внешний вид</h3>
-                <div class="setting-item">
-                    <label for="themeSelect">Тема:</label>
-                    <select id="themeSelect" class="setting-select">
-                        <option value="dark">Тёмная</option>
-                        <option value="light">Светлая</option>
-                        <option value="auto">Авто</option>
-                    </select>
-                </div>
-                <div class="setting-item">
-                    <label for="fontSize">Размер шрифта:</label>
-                    <select id="fontSize" class="setting-select">
-                        <option value="small">Маленький</option>
-                        <option value="medium" selected>Средний</option>
-                        <option value="large">Большой</option>
-                    </select>
-                </div>
+            <button class="close-btn" id="closeLoginModal">&times;</button>
+            <div class="modal-header">
+                <h2><i class="fas fa-sign-in-alt"></i> Вход в систему</h2>
             </div>
-            
-            <div class="settings-section">
-                <h3><i class="fas fa-bell"></i> Уведомления</h3>
-                <div class="setting-item">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="notifyDownloads" checked>
-                        <span>Уведомлять о скачиваниях</span>
-                    </label>
-                </div>
-                <div class="setting-item">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="notifyLikes" checked>
-                        <span>Уведомлять о лайках</span>
-                    </label>
-                </div>
-            </div>
-            
-            <div class="settings-section">
-                <h3><i class="fas fa-shield-alt"></i> Безопасность</h3>
-                <div class="setting-item">
-                    <button class="btn btn-secondary" id="changePasswordBtn">
-                        <i class="fas fa-key"></i> Сменить пароль
+            <div class="modal-body">
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label class="form-label">Email или логин</label>
+                        <input type="text" class="form-input" id="loginInput" placeholder="Введите email или логин" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Пароль</label>
+                        <input type="password" class="form-input" id="loginPassword" placeholder="Введите пароль" required>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        <i class="fas fa-sign-in-alt"></i> Войти
                     </button>
-                </div>
-            </div>
-            
-            <div class="settings-actions">
-                <button class="btn btn-primary" id="saveSettingsBtn">
-                    <i class="fas fa-save"></i> Сохранить настройки
-                </button>
+                    
+                    <div style="text-align: center; margin-top: 20px;">
+                        <p>Нет аккаунта? <a href="#" id="showRegister" style="color: var(--primary);">Зарегистрироваться</a></p>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 
-    <!-- Основной контент -->
-    <main class="main-content">
-        <div class="container">
-            <!-- Герой-секция -->
-            <section class="hero">
-                <div class="hero-content">
-                    <h1 class="hero-title">Обменивайтесь файлами легко и быстро</h1>
-                    <p class="hero-subtitle">Бесплатная платформа для обмена файлами любого типа и размера</p>
-                    <div class="hero-actions">
-                        <button class="btn btn-primary btn-large" id="heroUploadBtn">
-                            <i class="fas fa-cloud-upload-alt"></i> Начать загрузку
-                        </button>
-                        <button class="btn btn-secondary btn-large" id="exploreBtn">
-                            <i class="fas fa-search"></i> Искать файлы
-                        </button>
-                        <button class="btn btn-refresh btn-large" id="refreshBtn">
-                            <i class="fas fa-sync-alt"></i> Обновить
-                        </button>
+    <!-- Модальное окно регистрации -->
+    <div class="modal" id="registerModal">
+        <div class="modal-content">
+            <button class="close-btn" id="closeRegisterModal">&times;</button>
+            <div class="modal-header">
+                <h2><i class="fas fa-user-plus"></i> Регистрация</h2>
+            </div>
+            <div class="modal-body">
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label class="form-label">Имя пользователя</label>
+                        <input type="text" class="form-input" id="regUsername" placeholder="Придумайте логин" required>
                     </div>
-                </div>
-                <div class="hero-stats">
-                    <div class="stat-item">
-                        <i class="fas fa-users"></i>
-                        <div>
-                            <span class="stat-number" id="usersCount">0</span>
-                            <span>пользователей</span>
-                        </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-input" id="regEmail" placeholder="Введите email" required>
                     </div>
-                    <div class="stat-item">
-                        <i class="fas fa-file"></i>
-                        <div>
-                            <span class="stat-number" id="filesCount">0</span>
-                            <span>файлов</span>
-                        </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Пароль</label>
+                        <input type="password" class="form-input" id="regPassword" placeholder="Придумайте пароль" required>
                     </div>
-                    <div class="stat-item">
-                        <i class="fas fa-download"></i>
-                        <div>
-                            <span class="stat-number" id="downloadsCount">0</span>
-                            <span>скачиваний</span>
-                        </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Повторите пароль</label>
+                        <input type="password" class="form-input" id="regConfirmPassword" placeholder="Повторите пароль" required>
                     </div>
-                </div>
-            </section>
-
-            <!-- Категории -->
-            <section class="categories">
-                <h2><i class="fas fa-folder"></i> Категории файлов</h2>
-                <div class="category-grid">
-                    <div class="category-card" data-category="documents">
-                        <i class="fas fa-file-alt"></i>
-                        <h3>Документы</h3>
-                        <p>PDF, DOC, XLS, PPT</p>
-                        <span class="category-count" id="count-documents">0</span>
-                    </div>
-                    <div class="category-card" data-category="images">
-                        <i class="fas fa-image"></i>
-                        <h3>Изображения</h3>
-                        <p>JPG, PNG, GIF, SVG</p>
-                        <span class="category-count" id="count-images">0</span>
-                    </div>
-                    <div class="category-card" data-category="audio">
-                        <i class="fas fa-music"></i>
-                        <h3>Аудио</h3>
-                        <p>MP3, WAV, FLAC</p>
-                        <span class="category-count" id="count-audio">0</span>
-                    </div>
-                    <div class="category-card" data-category="video">
-                        <i class="fas fa-video"></i>
-                        <h3>Видео</h3>
-                        <p>MP4, AVI, MKV</p>
-                        <span class="category-count" id="count-video">0</span>
-                    </div>
-                    <div class="category-card" data-category="archives">
-                        <i class="fas fa-file-archive"></i>
-                        <h3>Архивы</h3>
-                        <p>ZIP, RAR, 7Z</p>
-                        <span class="category-count" id="count-archives">0</span>
-                    </div>
-                    <div class="category-card" data-category="software">
-                        <i class="fas fa-code"></i>
-                        <h3>Программы</h3>
-                        <p>EXE, APK, DMG</p>
-                        <span class="category-count" id="count-software">0</span>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Фильтры и сортировка -->
-            <section class="filters-section">
-                <div class="filters-container">
-                    <div class="filter-group">
-                        <label for="sortSelect"><i class="fas fa-sort"></i> Сортировать:</label>
-                        <select id="sortSelect">
-                            <option value="newest">Сначала новые</option>
-                            <option value="oldest">Сначала старые</option>
-                            <option value="downloads">По скачиваниям</option>
-                            <option value="likes">По лайкам</option>
-                            <option value="name">По названию</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
-                        <button class="btn btn-filter active" data-filter="all">Все</button>
-                        <button class="btn btn-filter" data-filter="popular">Популярные</button>
-                        <button class="btn btn-filter" data-filter="recent">Недавние</button>
-                        <button class="btn btn-filter" data-filter="myfiles">Мои файлы</button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Файлы -->
-            <section class="files-section">
-                <div class="section-header">
-                    <h2><i class="fas fa-file"></i> Все файлы</h2>
-                    <div class="view-controls">
-                        <button class="view-btn active" data-view="grid"><i class="fas fa-th"></i></button>
-                        <button class="view-btn" data-view="list"><i class="fas fa-list"></i></button>
-                    </div>
-                </div>
-                
-                <div class="files-grid" id="filesContainer">
-                    <!-- Файлы будут загружаться сюда -->
-                </div>
-                
-                <div class="load-more">
-                    <button class="btn btn-primary btn-large" id="loadMoreBtn">
-                        <i class="fas fa-plus"></i> Загрузить еще файлы
+                    
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        <i class="fas fa-user-plus"></i> Зарегистрироваться
                     </button>
-                </div>
-            </section>
-        </div>
-    </main>
-
-    <!-- Подвал -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <h3>FileShare</h3>
-                    <p>Быстрый и удобный обмен файлами</p>
-                    <div class="theme-selector">
-                        <span>Тема:</span>
-                        <select id="footerThemeSelect">
-                            <option value="dark">Тёмная</option>
-                            <option value="light">Светлая</option>
-                            <option value="auto">Авто</option>
-                        </select>
+                    
+                    <div style="text-align: center; margin-top: 20px;">
+                        <p>Уже есть аккаунт? <a href="#" id="showLogin" style="color: var(--primary);">Войти</a></p>
                     </div>
-                </div>
-                <div class="footer-section">
-                    <h3>Контакты</h3>
-                    <a href="#"><i class="fas fa-envelope"></i> support@fileshare.com</a>
-                    <a href="#"><i class="fas fa-phone"></i> +7 (999) 123-45-67</a>
-                </div>
-                <div class="footer-section">
-                    <h3>Социальные сети</h3>
-                    <div class="social-links">
-                        <a href="#"><i class="fab fa-vk"></i></a>
-                        <a href="#"><i class="fab fa-telegram"></i></a>
-                        <a href="#"><i class="fab fa-github"></i></a>
-                    </div>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2024 FileShare. Все права защищены.</p>
+                </form>
             </div>
         </div>
-    </footer>
+    </div>
 
     <!-- Уведомление -->
     <div class="notification" id="notification"></div>
 
-    <script src="script.js"></script>
+    <script>
+        // Main application script will be loaded here
+    </script>
+    <script src="app.js"></script>
 </body>
 </html>
